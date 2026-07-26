@@ -10,7 +10,7 @@ export class Field extends Graphics {
 
         // Basic rounded rectangle
         this
-            .roundRect(50, 50, Field.WIDTH, Field.HEIGHT, 30)
+            .roundRect(0, 0, Field.WIDTH, Field.HEIGHT, 30)
             .fill({ color: 0x4c8527 });
     }
 }

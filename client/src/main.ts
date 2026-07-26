@@ -1,5 +1,6 @@
 import { Application } from "pixi.js"; //Application = central object managing renderer, canvas, scene
 import { Field } from "./objects/Field";
+import { Input } from "./input/Input";
 const app = new Application();
 
 await app.init({
@@ -11,5 +12,7 @@ await app.init({
 document.body.appendChild(app.canvas); //canvas created, add as part of HTML page
 
 const field = new Field();
-
+field.position.set(100, 50);
 app.stage.addChild(field);
+
+const input = new Input();
