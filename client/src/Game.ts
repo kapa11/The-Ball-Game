@@ -2,6 +2,7 @@ import { Container } from "pixi.js";
 import { Field } from "./objects/Field";
 import { Player } from "./objects/Player";
 import { Input } from "./input/Input";
+import { Vector2 } from "./math/Vector2";
 
 export class Game extends Container {
 
@@ -26,13 +27,6 @@ export class Game extends Container {
     }
 
     update(dt: number) {
-
-        // Game loop will live here later.
-
-        // player.update(dt, this.input);
-        // ball.update(dt);
-        // collisions.update();
-        // score.update();
-
+        this.player.update(dt, this.input);
     }
 }
