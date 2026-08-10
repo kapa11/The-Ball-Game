@@ -27,7 +27,6 @@ export class Player extends Graphics {
     }
 
     update(dt: number, input: Input) {
-        const deltaTime = dt / 60;
 
         const direction = new Vector2();
         
@@ -36,7 +35,7 @@ export class Player extends Graphics {
         if (input.isDown("KeyA")) direction.x--;
         if (input.isDown("KeyD")) direction.x++;
 
-        const displacement = direction.normalize().scale(Player.SPEED * deltaTime);
+        const displacement = direction.normalize().scale(Player.SPEED * dt);
 
         this.x += displacement.x;
         this.y += displacement.y;

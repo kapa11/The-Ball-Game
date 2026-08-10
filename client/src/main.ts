@@ -16,5 +16,5 @@ const game = new Game();
 app.stage.addChild(game);
 
 app.ticker.add((ticker) => {
-    game.update(ticker.deltaTime);
+    game.update(ticker.deltaMS / 1000);
 });
