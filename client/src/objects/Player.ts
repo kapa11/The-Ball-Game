@@ -1,6 +1,8 @@
 import { Graphics } from "pixi.js";
 import { Input } from "../input/Input";
 import { Vector2 } from "../math/Vector2"
+import { Field } from "./Field";
+
 export class Player extends Graphics {
 
     static readonly PLAYER_RADIUS = 12;
@@ -9,10 +11,12 @@ export class Player extends Graphics {
     static readonly OUTLINE_COLOR = 0x1a1a1a;
     static readonly OUTLINE_WIDTH = 2;
 
-    static readonly SPEED = 300;
+    static readonly ACCELERATION = 900;
+    static readonly MAX_SPEED = 200;
+    static readonly DECELERATION = 1200;
 
-    vx = 0;
-    vy = 0;
+    velocity = new Vector2();
+    acceleration = new Vector2();
 
     constructor() {
         super();
@@ -26,6 +30,33 @@ export class Player extends Graphics {
             });
     }
 
+    private constrainToField() {
+
+        const left = Field.WORLD_MARGIN_X;
+        const right = Field.WORLD_MARGIN_X + Field.PITCH_WIDTH;
+
+        const top = Field.WORLD_MARGIN_Y;
+        const bottom = Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT;
+
+        const r = Player.PLAYER_RADIUS;
+
+        if (this.x - r < left) {
+            this.x = left + r;
+        }
+
+        if (this.x + r > right) {
+            this.x = right - r;
+        }
+
+        if (this.y - r < top) {
+            this.y = top + r;
+        }
+
+        if (this.y + r > bottom) {
+            this.y = bottom - r;
+        }
+    }
+
     update(dt: number, input: Input) {
 
         const direction = new Vector2();
@@ -35,9 +66,24 @@ export class Player extends Graphics {
         if (input.isDown("KeyA")) direction.x--;
         if (input.isDown("KeyD")) direction.x++;
 
-        const displacement = direction.normalize().scale(Player.SPEED * dt);
+        if(direction.lengthSq()==0){
+            const speed = this.velocity.length();
+            const newSpeed = Math.max(0, speed - Player.DECELERATION * dt);
+            this.velocity = this.velocity.normalize().scale(newSpeed);
+        }
+        else{
+            this.acceleration = direction.normalize().scale(Player.ACCELERATION);
+            this.velocity = this.velocity.add(this.acceleration.scale(dt));
+        }
 
-        this.x += displacement.x;
-        this.y += displacement.y;
+        const speed = this.velocity.length();
+        if (speed > Player.MAX_SPEED) {
+            this.velocity = this.velocity.normalize().scale(Player.MAX_SPEED);
+        }
+
+        this.x += this.velocity.x * dt;
+        this.y += this.velocity.y * dt;
+
+        this.constrainToField();
     }
 }
