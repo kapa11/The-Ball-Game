@@ -5,7 +5,7 @@ import { Field } from "./Field";
 
 export class Player extends Graphics {
 
-    static readonly PLAYER_RADIUS = 12;
+    static readonly PLAYER_RADIUS = 15;
 
     static readonly FILL_COLOR = 0xa50044;
     static readonly OUTLINE_COLOR = 0x1a1a1a;
@@ -14,7 +14,9 @@ export class Player extends Graphics {
     static readonly ACCELERATION = 900;
     static readonly MAX_SPEED = 200;
     static readonly DECELERATION = 1200;
-
+    static readonly MASS = 80;
+    
+    physicsPosition = new Vector2();
     velocity = new Vector2();
     acceleration = new Vector2();
 
@@ -40,21 +42,24 @@ export class Player extends Graphics {
 
         const r = Player.PLAYER_RADIUS;
 
-        if (this.x - r < left) {
-            this.x = left + r;
+        if (this.physicsPosition.x - r < left) {
+            this.physicsPosition.x = left + r;
         }
 
-        if (this.x + r > right) {
-            this.x = right - r;
+        if (this.physicsPosition.x + r > right) {
+            this.physicsPosition.x = right - r;
         }
 
-        if (this.y - r < top) {
-            this.y = top + r;
+        if (this.physicsPosition.y - r < top) {
+            this.physicsPosition.y = top + r;
         }
 
-        if (this.y + r > bottom) {
-            this.y = bottom - r;
+        if (this.physicsPosition.y + r > bottom) {
+            this.physicsPosition.y = bottom - r;
         }
+
+        this.x = this.physicsPosition.x;
+        this.y = this.physicsPosition.y;
     }
 
     update(dt: number, input: Input) {
@@ -81,9 +86,9 @@ export class Player extends Graphics {
             this.velocity = this.velocity.normalize().scale(Player.MAX_SPEED);
         }
 
-        this.x += this.velocity.x * dt;
-        this.y += this.velocity.y * dt;
-
+        this.physicsPosition = this.physicsPosition.add(this.velocity.scale(dt));
+        this.x = this.physicsPosition.x;
+        this.y = this.physicsPosition.y;
         this.constrainToField();
     }
 }
