@@ -12,7 +12,7 @@ export class Ball extends Graphics {
     static readonly DECELERATION = 60;
     static readonly EPSILON = 0.5;
 
-    static readonly MASS = 1;
+    static readonly MASS = 1; //for physics resolution with ball collisions
 
     physicsPosition = new Vector2();
     velocity = new Vector2();

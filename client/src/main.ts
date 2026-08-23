@@ -3,7 +3,7 @@ const app = new Application();
 
 await app.init({
     width: 1400, //size of entire game canvas...
-    height: 1000, //...not only size of field
+    height: 800, //...not only size of field
     backgroundColor: 0x111111,
 });
 

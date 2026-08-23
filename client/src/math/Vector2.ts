@@ -28,6 +28,10 @@ export class Vector2 {
         );
     }
 
+    dot(v: Vector2): number { 
+        return this.x * v.x + this.y * v.y; 
+    }
+    
     lengthSq(): number {
         return this.x * this.x + this.y * this.y;
     }

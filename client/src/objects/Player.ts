@@ -9,13 +9,16 @@ export class Player extends Graphics {
 
     static readonly FILL_COLOR = 0xa50044;
     static readonly OUTLINE_COLOR = 0x1a1a1a;
-    static readonly OUTLINE_WIDTH = 2;
+    static readonly OUTLINE_WIDTH = 3;
 
     static readonly ACCELERATION = 900;
     static readonly MAX_SPEED = 200;
     static readonly DECELERATION = 1200;
-    static readonly MASS = 80;
-    
+    static readonly MASS = 80; //for physics resolution with ball collisions
+
+    static readonly KICK_IMPULSE = 400;
+    static readonly KICK_RANGE = 5;
+
     physicsPosition = new Vector2();
     velocity = new Vector2();
     acceleration = new Vector2();
