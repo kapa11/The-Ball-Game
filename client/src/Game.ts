@@ -4,6 +4,7 @@ import { Player } from "./objects/Player";
 import { Input } from "./input/Input";
 import { Vector2 } from "./math/Vector2";
 import { Ball } from "./objects/Ball";
+import { CollisionSystem } from "./physics/CollisionSystem";
 
 export class Game extends Container {
 
@@ -11,6 +12,7 @@ export class Game extends Container {
     readonly player: Player;
     readonly input: Input;
     readonly ball: Ball;
+
     static readonly PLAYER_BALL_RESTITUTION = 0.2;
     static readonly WALL_RESTITUTION = 0.6;
 
@@ -75,7 +77,7 @@ export class Game extends Container {
         const kickDirection = this.ball.physicsPosition.sub(this.player.physicsPosition).normalize();
         const impulse = kickDirection.scale(Player.KICK_IMPULSE);
 
-        this.ball.velocity =this.ball.velocity.add(impulse.scale(1 / Ball.MASS));
+        this.ball.velocity = this.ball.velocity.add(impulse.scale(1 / Ball.MASS));
     }
 
     private checkKick() {
@@ -92,172 +94,16 @@ export class Game extends Container {
         }
     }
 
-    private checkBallWallCollision() {
-
-        const left = Field.WORLD_MARGIN_X;
-        const right = Field.WORLD_MARGIN_X + Field.PITCH_WIDTH;
-        const top = Field.WORLD_MARGIN_Y;
-        const bottom = Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT;
-
-        const r = Ball.BALL_RADIUS;
-        const e = Game.WALL_RESTITUTION;
-
-        // Top wall
-        if (this.ball.physicsPosition.y - r < top) {
-            this.ball.physicsPosition.y = top + r;
-
-            if (this.ball.velocity.y < 0) {
-                this.ball.velocity.y *= -e;
-            }
-        }
-
-        // Bottom wall
-        if (this.ball.physicsPosition.y + r > bottom) {
-            this.ball.physicsPosition.y = bottom - r;
-
-            if (this.ball.velocity.y > 0) {
-                this.ball.velocity.y *= -e;
-            }
-        }
-
-        const goalTop = top + (Field.PITCH_HEIGHT - Field.GOAL_WIDTH) / 2;
-        const goalBottom = goalTop + Field.GOAL_WIDTH;
-        const leftGoalBack = left - Field.GOAL_DEPTH;
-
-        // Left upper wall
-        if (
-            this.ball.physicsPosition.x - r < left &&
-            this.ball.physicsPosition.y < goalTop
-        ) {
-            this.ball.physicsPosition.x = left + r;
-
-            if (this.ball.velocity.x < 0) {
-                this.ball.velocity.x *= -e;
-            }
-        }
-
-        // Left lower wall
-        if (
-            this.ball.physicsPosition.x - r < left &&
-            this.ball.physicsPosition.y > goalBottom
-        ) {
-            this.ball.physicsPosition.x = left + r;
-
-            if (this.ball.velocity.x < 0) {
-                this.ball.velocity.x *= -e;
-            }
-        }
-
-        // Left goal - top inside wall
-        if (
-            this.ball.physicsPosition.x < left &&
-            this.ball.physicsPosition.y - r < goalTop
-        ) {
-            this.ball.physicsPosition.y = goalTop + r;
-
-            if (this.ball.velocity.y < 0) {
-                this.ball.velocity.y *= -e;
-            }
-        }
-
-        // Left goal - bottom inside wall
-        if (
-            this.ball.physicsPosition.x < left &&
-            this.ball.physicsPosition.y + r > goalBottom
-        ) {
-            this.ball.physicsPosition.y = goalBottom - r;
-
-            if (this.ball.velocity.y > 0) {
-                this.ball.velocity.y *= -e;
-            }
-        }
-
-
-        // Left goal - back wall
-        if (
-            this.ball.physicsPosition.x - r < leftGoalBack &&
-            this.ball.physicsPosition.y > goalTop &&
-            this.ball.physicsPosition.y < goalBottom
-        ) {
-            this.ball.physicsPosition.x = leftGoalBack + r;
-
-            if (this.ball.velocity.x < 0) {
-                this.ball.velocity.x *= -e;
-            }
-        }
-
-        const rightGoalBack = right + Field.GOAL_DEPTH;
-
-        // Right upper wall
-        if (
-            this.ball.physicsPosition.x + r > right &&
-            this.ball.physicsPosition.y < goalTop
-        ) {
-            this.ball.physicsPosition.x = right - r;
-
-            if (this.ball.velocity.x > 0) {
-                this.ball.velocity.x *= -e;
-            }
-        }
-
-        // Right lower wall
-        if (
-            this.ball.physicsPosition.x + r > right &&
-            this.ball.physicsPosition.y > goalBottom
-        ) {
-            this.ball.physicsPosition.x = right - r;
-
-            if (this.ball.velocity.x > 0) {
-                this.ball.velocity.x *= -e;
-            }
-        }
-
-        // Right goal - top inside wall
-        if (
-            this.ball.physicsPosition.x > right &&
-            this.ball.physicsPosition.y - r < goalTop
-        ) {
-            this.ball.physicsPosition.y = goalTop + r;
-
-            if (this.ball.velocity.y < 0) {
-                this.ball.velocity.y *= -e;
-            }
-        }
-
-        // Right goal - bottom inside wall
-        if (
-            this.ball.physicsPosition.x > right &&
-            this.ball.physicsPosition.y + r > goalBottom
-        ) {
-            this.ball.physicsPosition.y = goalBottom - r;
-
-            if (this.ball.velocity.y > 0) {
-                this.ball.velocity.y *= -e;
-            }
-        }
-
-        // Right goal - back wall
-        if (
-            this.ball.physicsPosition.x + r > rightGoalBack &&
-            this.ball.physicsPosition.y > goalTop &&
-            this.ball.physicsPosition.y < goalBottom
-        ) {
-            this.ball.physicsPosition.x = rightGoalBack - r;
-
-            if (this.ball.velocity.x > 0) {
-                this.ball.velocity.x *= -e;
-            }
-        }
-    }
-
     update(dt: number) {
         this.player.update(dt, this.input);
         this.ball.update(dt);
 
         this.checkPlayerBallCollision();
-        this.checkBallWallCollision();
+        //this.checkBallWallCollision();
 
         this.checkKick();
+
+        CollisionSystem.resolveBallBoundaryCollision(this.ball, this.field.boundary, Game.WALL_RESTITUTION);
         this.input.endFrame();
     }
 }

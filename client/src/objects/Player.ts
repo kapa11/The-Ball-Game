@@ -92,6 +92,6 @@ export class Player extends Graphics {
         this.physicsPosition = this.physicsPosition.add(this.velocity.scale(dt));
         this.x = this.physicsPosition.x;
         this.y = this.physicsPosition.y;
-        this.constrainToField();
+        //this.constrainToField();
     }
 }
