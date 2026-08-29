@@ -5,6 +5,9 @@ import { Input } from "./input/Input";
 import { Vector2 } from "./math/Vector2";
 import { Ball } from "./objects/Ball";
 import { CollisionSystem } from "./physics/CollisionSystem";
+import { MatchState } from "./game/MatchState";
+import { GoalDetector } from "./game/GoalDetector";
+import { GameState } from "../src/game/GameState";
 
 export class Game extends Container {
 
@@ -12,9 +15,13 @@ export class Game extends Container {
     readonly player: Player;
     readonly input: Input;
     readonly ball: Ball;
+    readonly matchState: MatchState;
 
     static readonly PLAYER_BALL_RESTITUTION = 0.2;
     static readonly WALL_RESTITUTION = 0.6;
+
+    static readonly MATCH_DURATION = 10; // seconds
+    static readonly GOAL_PAUSE_DURATION = 4; // seconds
 
     constructor() {
         super();
@@ -24,6 +31,7 @@ export class Game extends Container {
         this.player = new Player();
         this.input = new Input();
         this.ball = new Ball();
+        this.matchState = new MatchState();
 
         // Add them to the scene
         this.addChild(this.field);
@@ -94,16 +102,75 @@ export class Game extends Container {
         }
     }
 
+    private handleGoal(goal: "LEFT" | "RIGHT") {
+
+        if (goal === "LEFT") {
+            this.matchState.scoreRight++;
+        }
+        else {
+            this.matchState.scoreLeft++;
+        }
+
+        this.ball.velocity = new Vector2();
+
+        this.player.velocity = new Vector2();
+        this.player.acceleration = new Vector2();
+
+        this.matchState.state = GameState.GOAL_SCORED;
+    }
+
+    private resetAfterGoal() {
+
+        // Reset ball
+        this.ball.physicsPosition = new Vector2(Field.WORLD_MARGIN_X + Field.PITCH_WIDTH / 2, Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2);
+        this.ball.velocity = new Vector2();
+
+        // Reset player
+        this.player.physicsPosition = new Vector2(Field.WORLD_MARGIN_X + 100, Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2);
+        this.player.velocity = new Vector2();
+        this.player.acceleration = new Vector2();
+
+        // Reset state
+        this.matchState.goalPauseTime = 0;
+        this.matchState.state = GameState.PLAYING;
+    }
+    
     update(dt: number) {
-        this.player.update(dt, this.input);
-        this.ball.update(dt);
 
-        this.checkPlayerBallCollision();
-        //this.checkBallWallCollision();
+        if (this.matchState.state === GameState.PLAYING) {
+            this.matchState.matchTime += dt;
 
-        this.checkKick();
+            this.player.update(dt, this.input);
+            this.ball.update(dt);
 
-        CollisionSystem.resolveBallBoundaryCollision(this.ball, this.field.boundary, Game.WALL_RESTITUTION);
+            this.checkPlayerBallCollision();
+            this.checkKick();
+
+            CollisionSystem.resolveBallBoundaryCollision(this.ball, this.field.boundary, Game.WALL_RESTITUTION);
+
+            const goal = GoalDetector.checkGoal(this.ball, this.field);
+
+            if (goal !== null) {
+                this.handleGoal(goal);
+            }
+
+            if (this.matchState.matchTime >= Game.MATCH_DURATION) {
+                this.matchState.state = GameState.FINISHED;
+            }
+        }
+
+        else if (this.matchState.state === GameState.GOAL_SCORED) {
+             this.matchState.goalPauseTime += dt;
+
+            if (this.matchState.goalPauseTime >= Game.GOAL_PAUSE_DURATION) {
+                this.matchState.state = GameState.RESETTING;
+            }
+        }
+
+        else if (this.matchState.state === GameState.RESETTING) {
+            this.resetAfterGoal();
+        }
+
         this.input.endFrame();
     }
 }
