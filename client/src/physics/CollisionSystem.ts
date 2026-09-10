@@ -1,11 +1,59 @@
 import { Ball } from "../objects/Ball";
-import { Vector2 } from "../math/Vector2";
 import { Boundary } from "./boundary/Boundary";
 import { LineSegment } from "./boundary/LineSegment";
 import { Collision } from "./Collision";
 import { closestPointOnLineSegment } from "./geometry/ClosestPoint";
+import { PhysicsBody } from "./PhysicsBody";
 
 export class CollisionSystem {
+
+    static resolveBodyCollision(bodyA: PhysicsBody, bodyB: PhysicsBody, restitution: number): void {
+
+        const distanceVector = bodyB.physicsPosition.sub(bodyA.physicsPosition);
+
+        const distanceSquared = distanceVector.lengthSq();
+
+        const radiusSum = bodyA.radius + bodyB.radius;
+
+        if (distanceSquared > radiusSum * radiusSum) {
+            return;
+        }
+
+        const distance = Math.sqrt(distanceSquared);
+
+        if (distance === 0) {
+                return;
+            }
+
+        const normal = distanceVector.normalize();
+
+        // De-penetration
+            const overlap = radiusSum - distance;
+            const correction = normal.scale(overlap / 2);
+
+            bodyA.physicsPosition =
+                bodyA.physicsPosition.sub(correction);
+
+            bodyB.physicsPosition =
+                bodyB.physicsPosition.add(correction);
+
+            // Collision resolution
+            const relativeVelocity =
+                bodyB.velocity.sub(bodyA.velocity);
+
+            const velocityAlongNormal =
+                relativeVelocity.dot(normal);
+
+            if (velocityAlongNormal > 0) {
+                return;
+            }
+
+            const impulseMagnitude = -(1 + restitution) * velocityAlongNormal / ((1 / bodyA.mass) + (1 / bodyB.mass));
+
+            const impulse = normal.scale(impulseMagnitude);
+            bodyA.velocity = bodyA.velocity.sub(impulse.scale(1 / bodyA.mass));
+            bodyB.velocity = bodyB.velocity.add(impulse.scale(1 / bodyB.mass));
+    }
 
     static resolveBallBoundaryCollision(ball: Ball, boundary: Boundary, restitution: number): void {
         for (const shape of boundary.shapes) {
@@ -58,8 +106,13 @@ export class CollisionSystem {
         if (velocityAlongNormal < 0) {
             ball.velocity = ball.velocity.sub(collision.normal.scale((1 + restitution)*velocityAlongNormal));
         }
+    }
 
-        ball.x = ball.physicsPosition.x;
-        ball.y = ball.physicsPosition.y;
+    static applyKick(player: PhysicsBody, ball: PhysicsBody, impulseMagnitude: number): void {
+        const kickDirection = ball.physicsPosition.sub(player.physicsPosition).normalize();
+
+        const impulse = kickDirection.scale(impulseMagnitude);
+
+        ball.velocity = ball.velocity.add(impulse.scale(1 / ball.mass));
     }
 }

@@ -1,40 +1,28 @@
-import { Graphics } from "pixi.js";
-import { Input } from "../input/Input";
 import { Vector2 } from "../math/Vector2"
 import { Field } from "./Field";
+import type { PlayerInput } from "../input/PlayerInput"
+import { PhysicsBody } from "../physics/PhysicsBody";
 
-export class Player extends Graphics {
-
-    static readonly PLAYER_RADIUS = 15;
-
-    static readonly FILL_COLOR = 0xa50044;
-    static readonly OUTLINE_COLOR = 0x1a1a1a;
-    static readonly OUTLINE_WIDTH = 3;
+export class Player extends PhysicsBody {
 
     static readonly ACCELERATION = 900;
     static readonly MAX_SPEED = 200;
     static readonly DECELERATION = 1200;
-    static readonly MASS = 80; //for physics resolution with ball collisions
+    static readonly PLAYER_RADIUS = 15;
+    static readonly MASS = 80;
+
+    readonly radius = Player.PLAYER_RADIUS;
+    readonly mass = Player.MASS;
 
     static readonly KICK_IMPULSE = 400;
     static readonly KICK_RANGE = 5;
 
-    physicsPosition = new Vector2();
-    velocity = new Vector2();
     acceleration = new Vector2();
 
     constructor() {
         super();
-
-        this
-            .circle(0, 0, Player.PLAYER_RADIUS)
-            .fill({ color: Player.FILL_COLOR })
-            .stroke({
-                color: Player.OUTLINE_COLOR,
-                width: Player.OUTLINE_WIDTH
-            });
     }
-
+    
     private constrainToField() {
 
         const left = Field.WORLD_MARGIN_X;
@@ -43,7 +31,7 @@ export class Player extends Graphics {
         const top = Field.WORLD_MARGIN_Y;
         const bottom = Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT;
 
-        const r = Player.PLAYER_RADIUS;
+        const r = this.radius;
 
         if (this.physicsPosition.x - r < left) {
             this.physicsPosition.x = left + r;
@@ -60,19 +48,16 @@ export class Player extends Graphics {
         if (this.physicsPosition.y + r > bottom) {
             this.physicsPosition.y = bottom - r;
         }
-
-        this.x = this.physicsPosition.x;
-        this.y = this.physicsPosition.y;
     }
 
-    update(dt: number, input: Input) {
+    update(dt: number, input: PlayerInput) {
 
         const direction = new Vector2();
         
-        if (input.isDown("KeyW")) direction.y--;
-        if (input.isDown("KeyS")) direction.y++;
-        if (input.isDown("KeyA")) direction.x--;
-        if (input.isDown("KeyD")) direction.x++;
+        if (input.up) direction.y--;
+        if (input.down) direction.y++;
+        if (input.left) direction.x--;
+        if (input.right) direction.x++;
 
         if(direction.lengthSq()==0){
             const speed = this.velocity.length();
@@ -90,8 +75,6 @@ export class Player extends Graphics {
         }
 
         this.physicsPosition = this.physicsPosition.add(this.velocity.scale(dt));
-        this.x = this.physicsPosition.x;
-        this.y = this.physicsPosition.y;
-        //this.constrainToField();
+        this.constrainToField();
     }
 }

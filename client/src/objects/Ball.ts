@@ -1,33 +1,21 @@
-import { Graphics } from "pixi.js";
+import { PhysicsBody } from "../physics/PhysicsBody"
 import { Vector2 } from "../math/Vector2";
 
-export class Ball extends Graphics {
+export class Ball extends PhysicsBody{
 
     static readonly BALL_RADIUS = 10;
-    static readonly FILL_COLOR = 0xffffff;
-    static readonly OUTLINE_COLOR = 0x1a1a1a;
-    static readonly OUTLINE_WIDTH = 2;
+    static readonly MASS = 1;
 
+    readonly radius = Ball.BALL_RADIUS;
+    readonly mass = Ball.MASS;
+    constructor() {
+        super();
+    }
     //static readonly FRICTION = 0.4; if keeping exponential decel
     static readonly DECELERATION = 60;
     static readonly EPSILON = 0.5;
 
-    static readonly MASS = 1; //for physics resolution with ball collisions
-
-    physicsPosition = new Vector2();
-    velocity = new Vector2();
-
-    constructor() {
-        super();
-        
-        this
-            .circle(0, 0, Ball.BALL_RADIUS)
-            .fill({color: Ball.FILL_COLOR})
-            .stroke({
-                color: Ball.OUTLINE_COLOR,
-                width: Ball.OUTLINE_WIDTH
-            });
-    }
+    
 
     update(dt: number) {
         //this.velocity = this.velocity.scale(1 - Ball.FRICTION * dt); exponential deceleration
@@ -42,7 +30,5 @@ export class Ball extends Graphics {
 
         this.physicsPosition = this.physicsPosition.add(this.velocity.scale(dt));
 
-        this.x = this.physicsPosition.x;
-        this.y = this.physicsPosition.y;
     }
 }
