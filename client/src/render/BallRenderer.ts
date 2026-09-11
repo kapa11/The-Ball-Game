@@ -1,5 +1,6 @@
 import { Graphics } from "pixi.js";
 import { Ball } from "../objects/Ball";
+import type { SimulationSnapshot } from "../game/SimulationSnapshot";
 
 export class BallRenderer extends Graphics {
 
@@ -15,10 +16,7 @@ export class BallRenderer extends Graphics {
             });
     }
 
-    sync(ball: Ball) {
-        this.position.set(
-            ball.physicsPosition.x,
-            ball.physicsPosition.y
-        );
+    sync(ball: SimulationSnapshot["ball"]) {
+        this.position.set(ball.x, ball.y);
     }
 }

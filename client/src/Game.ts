@@ -1,12 +1,8 @@
 import { Field } from "./objects/Field";
-
 import { Player } from "./objects/Player";
-
 import { Vector2 } from "./math/Vector2";
-
 import { Ball } from "./objects/Ball";
-
-
+import type { SimulationSnapshot } from "./game/SimulationSnapshot";
 import { CollisionSystem } from "./physics/CollisionSystem";
 import { MatchState } from "./game/MatchState";
 import { GoalDetector } from "./game/GoalDetector";
@@ -16,13 +12,8 @@ import type { PlayerInput } from "./input/PlayerInput";
 export class Game {
 
     readonly field: Field;
-    //readonly fieldRenderer: FieldRenderer;
-
     readonly player: Player;
-    //readonly playerRenderer: PlayerRenderer;
-    //readonly input: Input;
     readonly ball: Ball;
-    //readonly ballRenderer: BallRenderer;
     readonly matchState: MatchState;
 
     static readonly PLAYER_BALL_RESTITUTION = 0.2;
@@ -32,22 +23,11 @@ export class Game {
     static readonly GOAL_PAUSE_DURATION = 4; // seconds
 
     constructor() {
-        //super();
-
         // Create game objects
         this.field = new Field();
-        //this.fieldRenderer = new FieldRenderer();
         this.player = new Player();
-        //this.playerRenderer = new PlayerRenderer();
-        //this.input = new Input();
         this.ball = new Ball();
-        //this.ballRenderer = new BallRenderer();
         this.matchState = new MatchState();
-
-        // Add them to the scene
-        //this.addChild(this.fieldRenderer);
-        //this.addChild(this.playerRenderer);
-        //this.addChild(this.ballRenderer);
 
         // Initial positions
         this.player.physicsPosition = new Vector2(
@@ -106,7 +86,33 @@ export class Game {
         this.matchState.state = GameState.PLAYING;
     }
     
-    update(dt: number, input: PlayerInput) {
+    private getSnapshot(): SimulationSnapshot {
+        return {
+            player: {
+                x: this.player.physicsPosition.x,
+                y: this.player.physicsPosition.y,
+                vx: this.player.velocity.x,
+                vy: this.player.velocity.y,
+            },
+
+            ball: {
+                x: this.ball.physicsPosition.x,
+                y: this.ball.physicsPosition.y,
+                vx: this.ball.velocity.x,
+                vy: this.ball.velocity.y,
+            },
+
+            score: {
+                left: this.matchState.scoreLeft,
+                right: this.matchState.scoreRight,
+            },
+
+            timer: this.matchState.matchTime,
+            phase: this.matchState.state,
+        };
+    }
+
+    update(dt: number, input: PlayerInput): SimulationSnapshot {
 
         if (this.matchState.state === GameState.PLAYING) {
             this.matchState.matchTime += dt;
@@ -144,8 +150,6 @@ export class Game {
             this.resetAfterGoal();
         }
 
-        //this.playerRenderer.sync(this.player);
-        //this.ballRenderer.sync(this.ball);
-        //this.input.endFrame();
+        return this.getSnapshot();
     }
 } 
