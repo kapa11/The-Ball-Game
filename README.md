@@ -93,31 +93,55 @@ export interface PlayerInput {
 ## 🔬 Physics & Mechanics Under the Hood
 
 ### 1. Ball Friction & Decay
+
 The ball maintains velocity across frames rather than moving on constant player push. Friction is modeled as exponential velocity decay:
-$$\vec{v}_{\text{next}} = \vec{v} \cdot (1 - \mu \cdot dt)$$
+
+$$
+\vec{v}_{\text{next}} = \vec{v} \cdot (1 - \mu \cdot dt)
+$$
+
 To prevent floating-point micro-drift where the ball crawls at infinitesimal speeds, an $\epsilon$-threshold zeroes the velocity when $|\vec{v}|^2 < \epsilon^2$.
 
 ### 2. Circle-Circle Collision & Positional De-penetration
+
 When detecting whether the ball and player collide, calculating square roots ($\sqrt{\Delta x^2 + \Delta y^2}$) every frame is costly. We check distance squared against radius sum squared first:
-$$\Delta x^2 + \Delta y^2 \le (r_{\text{player}} + r_{\text{ball}})^2$$
+
+$$
+\Delta x^2 + \Delta y^2 \le (r_{\text{player}} + r_{\text{ball}})^2
+$$
 
 If overlapping:
+
 1. **De-penetration**: Calculate true overlap and shift both bodies apart along the collision normal $\hat{n}$ by half the overlap to resolve physical intersection:
-   $$\vec{x}_{\text{correction}} = \hat{n} \cdot \frac{\text{overlap}}{2}$$
+
+$$
+\vec{x}_{\text{correction}} = \hat{n} \cdot \frac{\text{overlap}}{2}
+$$
+
 2. **Impulse Resolution**: Conserves momentum based on Newton's third law and the coefficient of restitution $e$:
-   $$J = \frac{-(1 + e)(\vec{u}_1 - \vec{u}_2) \cdot \hat{n}}{\frac{1}{m_1} + \frac{1}{m_2}}$$
-   Because the player is significantly heavier than the ball ($m_{\text{player}} \gg m_{\text{ball}}$), the ball absorbs the vast majority of the impulse velocity while the player barely flinches.
+
+$$
+J = \frac{-(1 + e)(\vec{u}_1 - \vec{u}_2) \cdot \hat{n}}{\frac{1}{m_1} + \frac{1}{m_2}}
+$$
+
+Because the player is significantly heavier than the ball ($m_{\text{player}} \gg m_{\text{ball}}$), the ball absorbs the vast majority of the impulse velocity while the player barely flinches.
 
 ### 3. Kicking as an Instantaneous Impulse
+
 Kicking is not a sustained force; it's a discrete impulse.
+
 - **Edge-triggered detection**: Requires spacebar to transition from *unpressed* $\to$ *pressed* (preventing kick spamming by holding the key).
 - **Proximity validation**: Allowed only when the distance between player and ball is within kick range.
 - **Directional Impulse**: Injects an instantaneous velocity boost along the line connecting player center to ball center:
-  $$\Delta \vec{v}_{\text{ball}} = \frac{\text{Impulse}}{m_{\text{ball}}}$$
+
+$$
+\Delta \vec{v}_{\text{ball}} = \frac{\text{Impulse}}{m_{\text{ball}}}
+$$
 
 ### 4. Wall & Goal Boundary Physics
+
 - Field boundaries are decomposed into mathematical `LineSegment` primitives.
-- Wall collisions find the closest point on the line segment, project the collision normal, de-penetrate the ball, and reflect the velocity vector ($\vec{v}' = \vec{v} - 2(\vec{v} \cdot \hat{n})\hat{n}$) scaled by wall restitution.
+- Wall collisions find the closest point on the line segment, project the collision normal, de-penetrate the ball, and reflect the velocity vector $\vec{v}' = \vec{v} - 2(\vec{v} \cdot \hat{n})\hat{n}$ scaled by wall restitution.
 - Goal posts are modeled as circular pegs rather than sharp rectangular boxes to yield natural, curved deflections.
 
 ---
