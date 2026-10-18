@@ -3,7 +3,7 @@ import { Field } from "../objects/Field";
 
 export class GoalDetector {
 
-    static checkGoal(ball: Ball, field: Field): "LEFT" | "RIGHT" | null {
+    static checkGoal(ball: Ball): "LEFT" | "RIGHT" | null {
 
         const top = Field.WORLD_MARGIN_Y;
         const left = Field.WORLD_MARGIN_X;

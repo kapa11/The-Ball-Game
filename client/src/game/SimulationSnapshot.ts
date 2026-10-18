@@ -1,12 +1,15 @@
 import type { GameState } from "./GameState";
+import type { Team } from "./PlayerData";
 
 export interface SimulationSnapshot {
-    player: {
+    players: {
+        id: string;
+        team: Team;
         x: number;
         y: number;
         vx: number;
         vy: number;
-    };
+    }[];
 
     ball: {
         x: number;

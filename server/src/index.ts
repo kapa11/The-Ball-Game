@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-
+import type { PlayerInput, ClientMessage, ServerMessage } from "../../shared/protocol.ts";
 const io = new Server(3000, {
     cors: {
         origin: "http://localhost:5173"
@@ -9,13 +9,7 @@ const io = new Server(3000, {
 console.log("Socket.io server listening on port 3000");
 
 type PlayerData = {
-    input: {
-        up: boolean;
-        down: boolean;
-        left: boolean;
-        right: boolean;
-        kick: boolean;
-    };
+    input: PlayerInput;
 };
 
 const players = new Map<string, PlayerData>();
@@ -46,7 +40,7 @@ io.on("connection", (socket) => {
         playerId
     });
 
-    socket.on("message", (message) => {
+    socket.on("message", (message: ClientMessage) => {
         if (message?.type !== "input") {
             return;
         }

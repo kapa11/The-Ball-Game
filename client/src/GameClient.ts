@@ -10,6 +10,8 @@ import { BallRenderer } from "./render/BallRenderer";
 
 import { io, Socket } from "socket.io-client";
 
+import type { ServerMessage } from "../../shared/protocol.ts";
+
 export class GameClient {
     readonly game: Game;
 
@@ -38,14 +40,13 @@ export class GameClient {
             console.log(message);
         });
 
-        this.socket.on("message", (message) => {
-
+        this.socket.on("message", (message: ServerMessage) => {
             if (message.type === "welcome") {
                 console.log("Assigned player ID:", message.playerId);
             }
-            
+
             if (message.type === "state") {
-                console.log("Received state:", message);
+                console.log("Received state:", message.snapshot);
             }
         });
 
@@ -59,6 +60,8 @@ export class GameClient {
         
         this.game = new Game();
 
+        this.game.addPlayer("local-player", "RED");
+        
         this.input = new Input();
         this.playerInputReader = new PlayerInputReader(this.input);
 
@@ -79,9 +82,19 @@ export class GameClient {
             ...playerInput
         });
 
-        const snapshot = this.game.update(dt, playerInput);
+        const inputs = new Map([
+            ["local-player", playerInput]
+        ]);
 
-        this.playerRenderer.sync(snapshot.player);
+        const snapshot = this.game.update(dt, inputs);
+
+        const localPlayer = snapshot.players.find(
+            player => player.id === "local-player"
+        );
+
+        if (localPlayer) {
+            this.playerRenderer.sync(localPlayer);
+        }
         this.ballRenderer.sync(snapshot.ball);
 
         this.playerInputReader.endFrame();

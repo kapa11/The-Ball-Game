@@ -8,11 +8,12 @@ import { MatchState } from "./game/MatchState";
 import { GoalDetector } from "./game/GoalDetector";
 import { GameState } from "../src/game/GameState";
 import type { PlayerInput } from "./input/PlayerInput";
+import type { PlayerData, PlayerInputs, Team } from "./game/PlayerData";
 
 export class Game {
 
     readonly field: Field;
-    readonly player: Player;
+    readonly players = new Map<string, PlayerData>();
     readonly ball: Ball;
     readonly matchState: MatchState;
 
@@ -25,31 +26,56 @@ export class Game {
     constructor() {
         // Create game objects
         this.field = new Field();
-        this.player = new Player();
+        //this.player = new Player();
         this.ball = new Ball();
         this.matchState = new MatchState();
 
         // Initial positions
-        this.player.physicsPosition = new Vector2(
+        /*this.player.physicsPosition = new Vector2(
             Field.WORLD_MARGIN_X + 100, 
-            Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2);
+            Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2);*/
 
         this.ball.physicsPosition = new Vector2(
             Field.WORLD_MARGIN_X + Field.PITCH_WIDTH / 2,
             Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2);
     }
 
-    private checkKick(input : PlayerInput) {
+    private getNeutralInput(): PlayerInput {
+        return {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            kick: false
+        };
+    }
+
+    addPlayer(id: string, team: Team): void {
+        const player = new Player();
+
+        player.physicsPosition = new Vector2(
+            Field.WORLD_MARGIN_X + Field.PITCH_WIDTH / 2,
+            Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2
+        );
+
+        this.players.set(id, {
+            id,
+            team,
+            body: player
+        });
+    }
+
+    private checkKick(player: Player, input: PlayerInput) {
         if (!input.kick) {
             return;
         }
 
-        const distanceVector = this.ball.physicsPosition.sub(this.player.physicsPosition);
+        const distanceVector = this.ball.physicsPosition.sub(player.physicsPosition);
 
-        const kickRange = this.player.radius + this.ball.radius + Player.KICK_RANGE;
+        const kickRange = player.radius + this.ball.radius + Player.KICK_RANGE;
 
         if (distanceVector.lengthSq() <= kickRange * kickRange) {
-            CollisionSystem.applyKick(this.player, this.ball, Player.KICK_IMPULSE);
+            CollisionSystem.applyKick(player, this.ball, Player.KICK_IMPULSE);
         }
     }
 
@@ -64,8 +90,10 @@ export class Game {
 
         this.ball.velocity = new Vector2();
 
-        this.player.velocity = new Vector2();
-        this.player.acceleration = new Vector2();
+        for (const playerData of this.players.values()) {
+            playerData.body.velocity = new Vector2();
+            playerData.body.acceleration = new Vector2();
+        }
 
         this.matchState.state = GameState.GOAL_SCORED;
     }
@@ -76,10 +104,22 @@ export class Game {
         this.ball.physicsPosition = new Vector2(Field.WORLD_MARGIN_X + Field.PITCH_WIDTH / 2, Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2);
         this.ball.velocity = new Vector2();
 
-        // Reset player
-        this.player.physicsPosition = new Vector2(Field.WORLD_MARGIN_X + 100, Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2);
-        this.player.velocity = new Vector2();
-        this.player.acceleration = new Vector2();
+        // Reset players
+        for (const playerData of this.players.values()) {
+            const player = playerData.body;
+
+            const spawnX =
+                playerData.team === "RED"
+                    ? Field.WORLD_MARGIN_X + 100
+                    : Field.WORLD_MARGIN_X + Field.PITCH_WIDTH - 100;
+
+            const spawnY =
+                Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2;
+
+            player.physicsPosition = new Vector2(spawnX, spawnY);
+            player.velocity = new Vector2();
+            player.acceleration = new Vector2();
+        }
 
         // Reset state
         this.matchState.goalPauseTime = 0;
@@ -88,12 +128,14 @@ export class Game {
     
     private getSnapshot(): SimulationSnapshot {
         return {
-            player: {
-                x: this.player.physicsPosition.x,
-                y: this.player.physicsPosition.y,
-                vx: this.player.velocity.x,
-                vy: this.player.velocity.y,
-            },
+            players: Array.from(this.players.values(), (playerData) => ({
+                id: playerData.id,
+                team: playerData.team,
+                x: playerData.body.physicsPosition.x,
+                y: playerData.body.physicsPosition.y,
+                vx: playerData.body.velocity.x,
+                vy: playerData.body.velocity.y
+            })),
 
             ball: {
                 x: this.ball.physicsPosition.x,
@@ -112,22 +154,34 @@ export class Game {
         };
     }
 
-    update(dt: number, input: PlayerInput): SimulationSnapshot {
+    update(dt: number, inputs: PlayerInputs): SimulationSnapshot {
 
         if (this.matchState.state === GameState.PLAYING) {
             this.matchState.matchTime += dt;
 
-            this.player.update(dt, input);
+            for (const [id, playerData] of this.players) {
+                const input = inputs.get(id) ?? this.getNeutralInput();
+                playerData.body.update(dt, input);
+            }
 
             this.ball.update(dt);
 
             
-            CollisionSystem.resolveBodyCollision(this.player, this.ball, Game.PLAYER_BALL_RESTITUTION);
-            this.checkKick(input);
+            for (const [id, playerData] of this.players) {
+                const input = inputs.get(id) ?? this.getNeutralInput();
+
+                CollisionSystem.resolveBodyCollision(
+                    playerData.body,
+                    this.ball,
+                    Game.PLAYER_BALL_RESTITUTION
+                );
+
+                this.checkKick(playerData.body, input);
+            }
 
             CollisionSystem.resolveBallBoundaryCollision(this.ball, this.field.boundary, Game.WALL_RESTITUTION);
 
-            const goal = GoalDetector.checkGoal(this.ball, this.field);
+            const goal = GoalDetector.checkGoal(this.ball);
 
             if (goal !== null) {
                 this.handleGoal(goal);

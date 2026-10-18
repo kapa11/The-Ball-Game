@@ -16,7 +16,7 @@ export class PlayerRenderer extends Graphics {
             });
     }
 
-    sync(player: SimulationSnapshot["player"]) {
+    sync(player: SimulationSnapshot["players"][number]) {
         this.position.set(player.x, player.y);
     }
 }

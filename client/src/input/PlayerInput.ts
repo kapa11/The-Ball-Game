@@ -1,7 +1,1 @@
-export type PlayerInput = {
-    up: boolean;
-    down: boolean;
-    left: boolean;
-    right: boolean;
-    kick: boolean;
-};
+export type { PlayerInput } from "../../../shared/protocol.ts";
