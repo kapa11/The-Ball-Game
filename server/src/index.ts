@@ -8,12 +8,89 @@ const io = new Server(3000, {
 
 console.log("Socket.io server listening on port 3000");
 
+type PlayerData = {
+    input: {
+        up: boolean;
+        down: boolean;
+        left: boolean;
+        right: boolean;
+        kick: boolean;
+    };
+};
+
+const players = new Map<string, PlayerData>();
+
 io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
-    socket.emit("hello", "Hello from the server!");
+    const playerId = socket.id;
+    console.log(`Player joined: ${playerId}`);
 
-    socket.on("helloBack", (message) => {
-        console.log("Client says:", message);
+    players.set(playerId, {
+        input: {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            kick: false
+        }
+    });
+    console.log(`Total connected players: ${players.size}`);
+
+    io.emit("playerJoined", {
+        playerId
+    });
+
+    socket.emit("message", {
+        type: "welcome",
+        playerId
+    });
+
+    socket.on("message", (message) => {
+        if (message?.type !== "input") {
+            return;
+        }
+
+        const player = players.get(playerId);
+
+        if (!player) {
+            return;
+        }
+
+        player.input = {
+            up: message.up === true,
+            down: message.down === true,
+            left: message.left === true,
+            right: message.right === true,
+            kick: message.kick === true
+        };
+    });
+
+    const stateInterval = setInterval(() => {
+        const player = players.get(playerId);
+
+        if (!player) {
+            return;
+        }
+
+        socket.emit("message", {
+            type: "state",
+            input: player.input
+        });
+    }, 50);
+
+    socket.on("disconnect", (reason) => {
+        clearInterval(stateInterval);
+
+        console.log(`Player disconnected: ${playerId}`);
+        console.log(`Reason: ${reason}`);
+
+        players.delete(playerId);
+
+        console.log(`Total connected players: ${players.size}`);
+
+        io.emit("playerLeft", {
+            playerId
+        });
     });
 });

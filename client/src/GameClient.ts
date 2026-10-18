@@ -28,7 +28,6 @@ export class GameClient {
         this.socket.on("connect", () => {
             console.log("Connected!");
             console.log("Initial transport:", this.socket.io.engine.transport.name);
-            this.socket.emit("helloBack", "Hello from the client!");
         });
 
         this.socket.io.engine.on("upgrade", () => {
@@ -39,6 +38,25 @@ export class GameClient {
             console.log(message);
         });
 
+        this.socket.on("message", (message) => {
+
+            if (message.type === "welcome") {
+                console.log("Assigned player ID:", message.playerId);
+            }
+            
+            if (message.type === "state") {
+                console.log("Received state:", message);
+            }
+        });
+
+        this.socket.on("playerJoined", (data) => {
+            console.log("Player joined:", data.playerId);
+        });
+
+        this.socket.on("playerLeft", (data) => {
+            console.log("Player left:", data.playerId);
+        });
+        
         this.game = new Game();
 
         this.input = new Input();
@@ -55,6 +73,11 @@ export class GameClient {
 
     update(dt: number) {
         const playerInput = this.playerInputReader.read();
+
+        this.socket.emit("message", {
+            type: "input",
+            ...playerInput
+        });
 
         const snapshot = this.game.update(dt, playerInput);
 

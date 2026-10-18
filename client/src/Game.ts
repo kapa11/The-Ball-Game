@@ -19,7 +19,7 @@ export class Game {
     static readonly PLAYER_BALL_RESTITUTION = 0.2;
     static readonly WALL_RESTITUTION = 0.6;
 
-    static readonly MATCH_DURATION = 100; // seconds
+    static readonly MATCH_DURATION = 2000; // seconds
     static readonly GOAL_PAUSE_DURATION = 4; // seconds
 
     constructor() {
