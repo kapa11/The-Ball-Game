@@ -1,6 +1,6 @@
 # ⚽ The Ball Game
 
-> A fast-paced, top-down 2D physics soccer game built from scratch in TypeScript, powered by PixiJS for rendering and a headless, zero-dependency physics simulation engine designed for authoritative multiplayer.
+> A fast-paced, top-down 2D physics soccer game built from scratch in TypeScript, powered by PixiJS for rendering and a headless, zero-dependency physics simulation engine architected for authoritative multiplayer.
 
 ![The Ball Game Pitch](docs/gameplay.png)
 
@@ -13,43 +13,47 @@
 Instead of slapping together a quick prototype inside a monolithic rendering loop, this project is built from first principles:
 - **Custom 2D Vector Math & Physics**: Circle-circle elastic collisions, momentum conservation with restitution, directional impulse kicking, and line-segment pitch boundary reflections.
 - **Strict Separation of Concerns**: Game logic and physics know **nothing** about PixiJS, canvases, or the DOM. The entire simulation runs headless and communicates via immutable state snapshots.
-- **Architected for Multiplayer**: The same simulation running locally in the browser today is built to run identically inside an authoritative Node.js server tomorrow over WebSockets.
+- **Multiplayer-Ready Architecture**: The simulation natively supports multiple players with team assignments (`RED` / `BLUE`), per-player input mapping, and independent kickoff spawning. A shared protocol (`shared/protocol.ts`) binds the client and the authoritative Socket.io server.
 
 ---
 
-## 📍 Current Status: Checkpoint 3 Complete
+## 📍 Development Progress & Status
 
 | Checkpoint | Status | Description |
 |---|:---:|---|
 | **Checkpoint 1** | ✅ | **Core Physics & Kinematics**: Player acceleration/deceleration, ball friction, circle collisions with de-penetration, momentum-conserving impulse resolution, and edge-triggered kicking. |
 | **Checkpoint 2** | ✅ | **Pitch & Match Rules**: FIFA-scaled pitch geometry, goal net detection, score tracking, match timer, and match lifecycle states (`PLAYING` $\to$ `GOAL_SCORED` $\to$ `RESETTING` $\to$ `FINISHED`). |
 | **Checkpoint 3** | ✅ | **Headless Architecture Split**: Simulation completely divorced from PixiJS. Introduction of `PhysicsBody`, `SimulationSnapshot`, decoupled `PlayerInput`, and dedicated renderers. |
-| **Checkpoint 4** | 🚧 *(In Progress)* | **Networking & Multiplayer Plumbing**: Authoritative Node.js server, Socket.io bidirectional connection, client input streaming, and server snapshot broadcasting. |
+| **Checkpoint 4** | 🚧 *(In Progress)* | **Multiplayer Simulation & Networking**: Multi-player support in simulation layer, team spawns, shared network protocol (`shared/protocol.ts`), Socket.io server connection loop, player join/leave lifecycle, and client input streaming. |
 
 ---
 
 ## 🏗️ Architecture & Simulation Pipeline
 
-The defining architectural decision in Checkpoint 3 was splitting the engine into three distinct roles: **Simulation (Model)**, **Renderers (View)**, and **Client Orchestrator (Controller)**.
+The engine separates responsibilities into **Simulation (Model)**, **Renderers (View)**, **Networking (Transport)**, and **Client Orchestrator (Controller)**.
 
 ```
        [ Keyboard / DOM ]
                │
                ▼
       [ PlayerInputReader ]
-               │  PlayerInput { move, kick }
-               ▼
-    ┌──────────────────────┐
-    │     Game.update()    │  <--- Pure TypeScript (Headless)
-    │  - Kinematics        │       No PixiJS / No DOM / No Canvas
-    │  - Collision System  │
-    │  - Goal Detection    │
+               │
+         PlayerInput { move, kick }
+         ┌─────┴───────────────────────┐
+         │ (Local Input)               │ (Stream to Server via Socket.io)
+         ▼                             ▼
+    ┌──────────────────────┐      ┌─────────────────────────┐
+    │     Game.update()    │      │    Socket.io Server     │
+    │  - Multi-Player Map  │      │  - Player Sessions      │
+    │  - Team Kinematics   │      │  - Input Aggregation    │
+    │  - Collision System  │      │  - Shared Protocol DTOs │
+    │  - Goal Detection    │      └─────────────────────────┘
     │  - Match State       │
     └──────────┬───────────┘
                │  SimulationSnapshot (Plain DTO)
                ▼
     ┌──────────────────────┐
-    │      GameClient      │  <--- Presentation Bridge
+    │      GameClient      │  <--- Presentation & Network Bridge
     └──────────┬───────────┘
                │
          ┌─────┴─────┐
@@ -57,36 +61,58 @@ The defining architectural decision in Checkpoint 3 was splitting the engine int
    [PlayerRenderer] [BallRenderer]  <--- PixiJS v8 Display Objects
 ```
 
-### 1. Pure Headless Simulation (`Game.ts`)
-The `Game` class has **zero PixiJS imports**. It owns the physical objects, steps time forward by `dt`, checks boundary and body collisions, checks for goals, and returns an immutable **`SimulationSnapshot`**. Because it has no browser dependencies, this exact class can run in Node.js server environments without modification.
+### 1. Multi-Player Headless Simulation (`Game.ts`)
+The `Game` class has **zero PixiJS imports**. It manages a dynamic map of players (`Map<string, PlayerData>`) across teams (`RED` / `BLUE`):
+- Supports runtime player joins (`addPlayer(id, team)`).
+- Assigns kickoff positions based on team side (RED spawns on the left, BLUE on the right).
+- Accepts a frame input map (`PlayerInputs = Map<string, PlayerInput>`) to advance all players concurrently.
+- Evaluates per-player ball collisions and kick attempts.
+- Emits an immutable **`SimulationSnapshot`** describing the entire field state.
 
-### 2. The Data Contract (`SimulationSnapshot.ts`)
-Renderers never reach into game entity internals. Instead, the game emits a flat Data Transfer Object (DTO) at the end of every frame:
+### 2. The Shared Network Protocol (`shared/protocol.ts`)
+A dedicated protocol module provides type-safe contracts shared between client and server without duplicating interfaces:
 ```typescript
-export interface SimulationSnapshot {
-    player: { x: number; y: number; vx: number; vy: number };
-    ball:   { x: number; y: number; vx: number; vy: number };
-    score:  { left: number; right: number };
-    timer:  number;
-    phase:  GameState;
-}
-```
-This flat structure serves a dual purpose:
-1. **Today**: Tells `PlayerRenderer` and `BallRenderer` where to position sprites on screen.
-2. **Tomorrow**: Easily serializable (`JSON.stringify` or binary buffers) to broadcast over a network socket to connected clients.
-
-### 3. Dedicated Renderers (`src/render/`)
-`FieldRenderer`, `PlayerRenderer`, and `BallRenderer` extend PixiJS graphics classes. They know only how to draw themselves and expose simple `.sync()` methods to update their visual coordinates based on the snapshot.
-
-### 4. Decoupled Input (`PlayerInput.ts` & `PlayerInputReader.ts`)
-Entities do not listen to DOM `KeyboardEvents`. Instead, `PlayerInputReader` samples the raw keyboard listener and translates it into a generic input payload:
-```typescript
-export interface PlayerInput {
-    move: Vector2;
+export type PlayerInput = {
+    up: boolean;
+    down: boolean;
+    left: boolean;
+    right: boolean;
     kick: boolean;
-}
+};
+
+export type ClientMessage = {
+    type: "input";
+} & PlayerInput;
+
+export type NetworkPlayer = {
+    id: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+};
+
+export type GameSnapshot = {
+    players: NetworkPlayer[];
+    ball: { x: number; y: number; vx: number; vy: number };
+    score: { left: number; right: number };
+    timer: number;
+    phase: MatchPhase;
+};
+
+export type ServerMessage =
+    | { type: "welcome"; playerId: string }
+    | { type: "state"; snapshot: GameSnapshot };
 ```
-`Player.update(dt, input)` consumes this interface directly. Whether input comes from local keys or a WebSocket packet over the internet, the player simulation logic behaves identically.
+
+### 3. Bidirectional Socket.io Networking (`server/` & `GameClient.ts`)
+- **Transport Upgrade**: Handshakes over HTTP and automatically upgrades to persistent, low-latency WebSocket transport.
+- **Connection Lifecycle**: Tracks player connects and disconnects, assigns unique IDs, and broadcasts `playerJoined` and `playerLeft` events.
+- **Input Streaming**: The client captures input per frame and streams it to the server (`type: "input"`).
+- **State Broadcast Plumbing**: The server aggregates player inputs and broadcasts state ticks back to connected clients.
+
+### 4. Dedicated Renderers (`src/render/`)
+`FieldRenderer`, `PlayerRenderer`, and `BallRenderer` extend PixiJS graphics classes. They know only how to draw themselves and expose simple `.sync()` methods to update visual coordinates from snapshot data.
 
 ---
 
@@ -156,13 +182,13 @@ stateDiagram-v2
     PLAYING --> GOAL_SCORED: Ball crosses goal line
     PLAYING --> FINISHED: matchTime >= MATCH_DURATION
     GOAL_SCORED --> RESETTING: goalPauseTime >= GOAL_PAUSE_DURATION
-    RESETTING --> PLAYING: Reset ball & player to kickoff spots
+    RESETTING --> PLAYING: Reset ball & players to team kickoff spots
     FINISHED --> [*]
 ```
 
-- **`PLAYING`**: Full physics integration, collision detection, and input processing active.
-- **`GOAL_SCORED`**: Physics freezes immediately. Velocities are zeroed to prevent accidental ricochets or double-goal triggers. Score is awarded to the opposing side.
-- **`RESETTING`**: Positions snap back to kickoff coordinates, timers reset, and play resumes.
+- **`PLAYING`**: Full physics integration, multi-player collision detection, and input processing active.
+- **`GOAL_SCORED`**: Physics freezes immediately. Velocities are zeroed across all players and the ball to prevent accidental ricochets or double-goal triggers. Score is awarded to the opposing side.
+- **`RESETTING`**: Positions snap back to team kickoff coordinates, timers reset, and play resumes.
 - **`FINISHED`**: Match concludes once the match timer expires.
 
 ---
@@ -173,21 +199,22 @@ stateDiagram-v2
 The-Ball-Game/
 ├── client/
 │   ├── index.html
-│   ├── package.json               # PixiJS v8, TypeScript, Vite
+│   ├── package.json               # PixiJS v8, Socket.io-client, Vite, TypeScript
 │   ├── tsconfig.json
 │   ├── public/                    # Favicons and SVG assets
 │   └── src/
 │       ├── main.ts                # Application bootstrap & Pixi ticker
-│       ├── GameClient.ts          # Bridge orchestrating Input -> Game -> Renderers
-│       ├── Game.ts                # Pure headless simulation & match orchestrator
+│       ├── GameClient.ts          # Bridge orchestrating Input -> Socket -> Game -> Renderers
+│       ├── Game.ts                # Pure headless multi-player simulation
 │       ├── game/
 │       │   ├── GameState.ts       # Match state enum (PLAYING, GOAL_SCORED, etc.)
 │       │   ├── GoalDetector.ts    # Geometric goal line detection
 │       │   ├── MatchState.ts      # Score counters and timers
+│       │   ├── PlayerData.ts      # Team types & player body metadata
 │       │   └── SimulationSnapshot.ts # Flat DTO contract between sim & view
 │       ├── input/
 │       │   ├── Input.ts           # Low-level DOM keyboard listener
-│       │   ├── PlayerInput.ts     # Pure input interface definition
+│       │   ├── PlayerInput.ts     # Re-export from shared protocol
 │       │   └── PlayerInputReader.ts # Samples Input into PlayerInput
 │       ├── math/
 │       │   └── Vector2.ts         # Custom 2D vector class
@@ -205,9 +232,14 @@ The-Ball-Game/
 │           ├── BallRenderer.ts    # PixiJS ball visual sync
 │           ├── FieldRenderer.ts   # PixiJS pitch lines, markings & goal nets
 │           └── PlayerRenderer.ts  # PixiJS player visual sync
-├── docs/
-│   └── gameplay.png               # In-game pitch screenshot
-└── server/                        # Scaffolding for authoritative multiplayer
+├── server/
+│   ├── package.json               # Socket.io, tsx, TypeScript
+│   └── src/
+│       └── index.ts               # Socket.io game server & connection manager
+├── shared/
+│   └── protocol.ts                # Shared network protocol types (DTOs & events)
+└── docs/
+    └── gameplay.png               # In-game pitch screenshot
 ```
 
 ---
@@ -232,32 +264,34 @@ The-Ball-Game/
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/your-username/The-Ball-Game.git
-   cd The-Ball-Game/client
+   cd The-Ball-Game
    ```
 
-2. **Install dependencies:**
+2. **Start the Socket.io Server:**
    ```bash
+   cd server
    npm install
-   ```
-
-3. **Start the local development server:**
-   ```bash
    npm run dev
    ```
+   The server will start listening on `http://localhost:3000`.
 
-4. **Play:**
-   Open the printed local URL (usually `http://localhost:5173`) in your browser.
+3. **Start the Game Client:**
+   In a separate terminal window:
+   ```bash
+   cd client
+   npm install
+   npm run dev
+   ```
+   Open `http://localhost:5173` in your browser. Open multiple tabs to test connection and player tracking events in the server logs!
 
 ---
 
 ## 💡 Engineering Insights & Lessons Learned
 
-During the transition across Checkpoints 1 through 3, several key architectural lessons emerged:
-
-- **Inheritance vs. Composition for Renderers**: Initially, entities extended Pixi's `Graphics` directly. While quick to start, it tightly coupled physical units with rendering concerns. Decoupling them so that `Player` is pure data and `PlayerRenderer` simply syncs from a snapshot made the simulation testable and portable.
-- **The Power of Plain DTOs**: Live class instances with methods and nested circular references cannot be safely stringified or transmitted over network sockets. The `SimulationSnapshot` pattern forced a clean, flat boundary where the simulation exposes only what is true right now.
-- **Discrete vs. Continuous Input**: Treating a kick as a continuous state resulted in uncontrollable hyper-acceleration. Treating it as a discrete positive-edge event with a kick radius and cooldown immediately made the mechanic feel deliberate and skill-based.
-- **Why WebSockets Over HTTP Polling**: In multiplayer simulations, client-to-server input must stream continuously, and server-to-client state must push unprompted. HTTP polling introduces latency equal to the polling interval and massive header overhead. A persistent WebSocket channel (via Socket.io) enables bidirectional, low-overhead event streaming.
+- **Decoupled Simulation Enables Server Portability**: Because `Game.ts` does not touch PixiJS or the DOM, the exact same simulation can run inside a Node.js process without polyfills or mocks.
+- **Shared Protocol Contracts**: Maintaining a single `shared/protocol.ts` imported by both client and server eliminates contract mismatches and keeps network payloads strictly typed.
+- **Multi-Entity Map Architecture**: Transitioning from a single `this.player` instance to a `Map<string, PlayerData>` with team designations cleanly generalized collision loops, kick checks, and goal resets for any number of players.
+- **Sockets vs. HTTP Polling**: In high-frequency 2D games, client-to-server input must stream continuously, and server-to-client snapshots must push unprompted. A persistent WebSocket channel (via Socket.io) guarantees low-latency, bidirectional streaming with automatic HTTP long-polling fallback.
 
 ---
 
@@ -267,8 +301,11 @@ During the transition across Checkpoints 1 through 3, several key architectural 
 - [x] **Momentum conservation collisions & impulse kicks**
 - [x] **FIFA-proportional pitch geometry and goal validation**
 - [x] **Decoupled Headless Simulation (Checkpoint 3)**
-- [ ] **Socket.io connection handshake & round-trip verification (Checkpoint 4)**
-- [ ] **Authoritative Node.js game server loop with fixed timestep ticks**
+- [x] **Multi-player readiness in simulation layer (player map, teams, per-player inputs)**
+- [x] **Shared network protocol (`shared/protocol.ts`)**
+- [x] **Socket.io connection handshake & input streaming plumbing (Checkpoint 4)**
+- [ ] **Authoritative server-side game tick (migrating `Game.update` to Node.js server)**
+- [ ] **Multi-client visual rendering (spawning dynamic `PlayerRenderer` instances per network player)**
 - [ ] **Multiplayer room matchmaking & 1v1 / 2v2 support**
 - [ ] **Client-side prediction, server reconciliation, and entity interpolation**
 - [ ] **Dynamic scoreboard UI, goal celebrations, and instant replay queue**
