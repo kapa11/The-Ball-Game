@@ -53,10 +53,15 @@ export class Game {
     addPlayer(id: string, team: Team): void {
         const player = new Player();
 
-        player.physicsPosition = new Vector2(
-            Field.WORLD_MARGIN_X + Field.PITCH_WIDTH / 2,
-            Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2
-        );
+        const spawnX =
+            team === "RED"
+                ? Field.WORLD_MARGIN_X + 100
+                : Field.WORLD_MARGIN_X + Field.PITCH_WIDTH - 100;
+
+        const spawnY =
+            Field.WORLD_MARGIN_Y + Field.PITCH_HEIGHT / 2;
+
+        player.physicsPosition = new Vector2(spawnX, spawnY);
 
         this.players.set(id, {
             id,

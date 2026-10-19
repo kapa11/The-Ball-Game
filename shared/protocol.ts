@@ -12,6 +12,7 @@ export type ClientMessage = {
 
 export type NetworkPlayer = {
     id: string;
+    team: "RED" | "BLUE";
     x: number;
     y: number;
     vx: number;

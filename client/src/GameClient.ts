@@ -1,6 +1,9 @@
 import { Application } from "pixi.js";
+import { io, Socket } from "socket.io-client";
 
-import { Game } from "../../shared/game/Game.ts";
+import type { PlayerInput, ServerMessage } from "../../shared/protocol.ts";
+import type { SimulationSnapshot } from "../../shared/game/game/SimulationSnapshot.ts";
+
 import { Input } from "./input/Input";
 import { PlayerInputReader } from "./input/PlayerInputReader";
 
@@ -8,13 +11,9 @@ import { FieldRenderer } from "./render/FieldRenderer";
 import { PlayerRenderer } from "./render/PlayerRenderer";
 import { BallRenderer } from "./render/BallRenderer";
 
-import { io, Socket } from "socket.io-client";
-
-import type { ServerMessage } from "../../shared/protocol.ts";
-
 export class GameClient {
-    readonly game: Game;
     private readonly app: Application;
+
     readonly input: Input;
     readonly playerInputReader: PlayerInputReader;
 
@@ -24,29 +23,39 @@ export class GameClient {
 
     readonly socket: Socket;
 
+    private latestSnapshot: SimulationSnapshot | null = null;
+    private playerId: string | null = null;
+
     constructor(app: Application) {
+        this.app = app;
+
+        // Connect to the game server.
         this.socket = io("http://localhost:3000");
 
         this.socket.on("connect", () => {
-            console.log("Connected!");
-            console.log("Initial transport:", this.socket.io.engine.transport.name);
+            console.log("Connected to server:", this.socket.id);
         });
 
-        this.socket.io.engine.on("upgrade", () => {
-            console.log("Upgraded to:", this.socket.io.engine.transport.name);
-        });
-
-        this.socket.on("hello", (message) => {
-            console.log(message);
-        });
-
+        // Receive messages from the server.
         this.socket.on("message", (message: ServerMessage) => {
             if (message.type === "welcome") {
-                console.log("Assigned player ID:", message.playerId);
+                this.playerId = message.playerId;
+                console.log("Assigned player ID:", this.playerId);
             }
 
             if (message.type === "state") {
-                console.log("Received state:", message.snapshot);
+                this.latestSnapshot = message.snapshot;
+
+                console.log(
+                    "Players:",
+                    message.snapshot.players.map(p => ({
+                        id: p.id,
+                        x: p.x,
+                        y: p.y
+                    })),
+                    "Ball:",
+                    message.snapshot.ball
+                );
             }
         });
 
@@ -56,24 +65,26 @@ export class GameClient {
 
         this.socket.on("playerLeft", (data) => {
             console.log("Player left:", data.playerId);
+
+            const renderer = this.playerRenderers.get(data.playerId);
+
+            if (renderer) {
+                this.app.stage.removeChild(renderer);
+                renderer.destroy();
+                this.playerRenderers.delete(data.playerId);
+            }
         });
-        
-        this.game = new Game();
-        this.app = app;
-        this.game.addPlayer("local-player", "RED");
-        this.game.addPlayer("test-player", "BLUE");
-        
+
+        // Set up input.
         this.input = new Input();
         this.playerInputReader = new PlayerInputReader(this.input);
 
+        // Set up renderers.
         this.fieldRenderer = new FieldRenderer();
         this.ballRenderer = new BallRenderer();
 
-        //testing
-        this.game.addPlayer("local-player", "RED");
-
-        app.stage.addChild(this.fieldRenderer);
-        app.stage.addChild(this.ballRenderer);
+        this.app.stage.addChild(this.fieldRenderer);
+        this.app.stage.addChild(this.ballRenderer);
     }
 
     private addPlayerRenderer(playerId: string): PlayerRenderer {
@@ -85,31 +96,31 @@ export class GameClient {
         return renderer;
     }
 
-    update(dt: number) {
-        const playerInput = this.playerInputReader.read();
+    update(_dt: number) {
+        // Read keyboard input and send it to the server.
+        const playerInput: PlayerInput = this.playerInputReader.read();
 
         this.socket.emit("message", {
             type: "input",
             ...playerInput
         });
 
-        const inputs = new Map([
-            ["local-player", playerInput]
-        ]);
+        // Render only the latest authoritative server snapshot.
+        if (this.latestSnapshot !== null) {
+            const snapshot = this.latestSnapshot;
 
-        const snapshot = this.game.update(dt, inputs);
+            for (const player of snapshot.players) {
+                let renderer = this.playerRenderers.get(player.id);
 
-        for (const player of snapshot.players) {
-            let renderer = this.playerRenderers.get(player.id);
+                if (!renderer) {
+                    renderer = this.addPlayerRenderer(player.id);
+                }
 
-            if (!renderer) {
-                renderer = this.addPlayerRenderer(player.id);
+                renderer.sync(player);
             }
 
-            renderer.sync(player);
+            this.ballRenderer.sync(snapshot.ball);
         }
-
-        this.ballRenderer.sync(snapshot.ball);
 
         this.playerInputReader.endFrame();
     }
