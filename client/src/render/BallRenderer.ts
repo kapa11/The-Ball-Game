@@ -1,6 +1,6 @@
 import { Graphics } from "pixi.js";
-import { Ball } from "../objects/Ball";
-import type { SimulationSnapshot } from "../game/SimulationSnapshot";
+import { Ball } from "../../../shared/game/objects/Ball.ts";
+import type { SimulationSnapshot } from "../../../shared/game/game/SimulationSnapshot.ts";
 
 export class BallRenderer extends Graphics {
 

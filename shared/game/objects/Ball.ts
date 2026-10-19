@@ -1,4 +1,4 @@
-import { PhysicsBody } from "../physics/PhysicsBody"
+import { PhysicsBody } from "../physics/PhysicsBody.ts"
 //import { Vector2 } from "../math/Vector2";
 
 export class Ball extends PhysicsBody{

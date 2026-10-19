@@ -1,5 +1,5 @@
-import { Vector2 } from "../../math/Vector2";
-import { BoundaryShape } from "./BoundaryShape";
+import { Vector2 } from "../../math/Vector2.ts";
+import { BoundaryShape } from "./BoundaryShape.ts";
 
 export class LineSegment extends BoundaryShape {
 

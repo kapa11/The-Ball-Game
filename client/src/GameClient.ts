@@ -1,6 +1,6 @@
 import { Application } from "pixi.js";
 
-import { Game } from "./Game";
+import { Game } from "../../shared/game/Game.ts";
 import { Input } from "./input/Input";
 import { PlayerInputReader } from "./input/PlayerInputReader";
 
@@ -14,12 +14,12 @@ import type { ServerMessage } from "../../shared/protocol.ts";
 
 export class GameClient {
     readonly game: Game;
-
+    private readonly app: Application;
     readonly input: Input;
     readonly playerInputReader: PlayerInputReader;
 
     readonly fieldRenderer: FieldRenderer;
-    readonly playerRenderer: PlayerRenderer;
+    readonly playerRenderers = new Map<string, PlayerRenderer>();
     readonly ballRenderer: BallRenderer;
 
     readonly socket: Socket;
@@ -59,19 +59,30 @@ export class GameClient {
         });
         
         this.game = new Game();
-
+        this.app = app;
         this.game.addPlayer("local-player", "RED");
+        this.game.addPlayer("test-player", "BLUE");
         
         this.input = new Input();
         this.playerInputReader = new PlayerInputReader(this.input);
 
         this.fieldRenderer = new FieldRenderer();
-        this.playerRenderer = new PlayerRenderer();
         this.ballRenderer = new BallRenderer();
 
+        //testing
+        this.game.addPlayer("local-player", "RED");
+
         app.stage.addChild(this.fieldRenderer);
-        app.stage.addChild(this.playerRenderer);
         app.stage.addChild(this.ballRenderer);
+    }
+
+    private addPlayerRenderer(playerId: string): PlayerRenderer {
+        const renderer = new PlayerRenderer();
+
+        this.playerRenderers.set(playerId, renderer);
+        this.app.stage.addChild(renderer);
+
+        return renderer;
     }
 
     update(dt: number) {
@@ -88,13 +99,16 @@ export class GameClient {
 
         const snapshot = this.game.update(dt, inputs);
 
-        const localPlayer = snapshot.players.find(
-            player => player.id === "local-player"
-        );
+        for (const player of snapshot.players) {
+            let renderer = this.playerRenderers.get(player.id);
 
-        if (localPlayer) {
-            this.playerRenderer.sync(localPlayer);
+            if (!renderer) {
+                renderer = this.addPlayerRenderer(player.id);
+            }
+
+            renderer.sync(player);
         }
+
         this.ballRenderer.sync(snapshot.ball);
 
         this.playerInputReader.endFrame();

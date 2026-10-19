@@ -1,6 +1,6 @@
-import { Boundary } from "../physics/boundary/Boundary";
-import { LineSegment } from "../physics/boundary/LineSegment";
-import { Vector2 } from "../math/Vector2";
+import { Boundary } from "../physics/boundary/Boundary.ts";
+import { LineSegment } from "../physics/boundary/LineSegment.ts";
+import { Vector2 } from "../math/Vector2.ts";
 
 export class Field {
 

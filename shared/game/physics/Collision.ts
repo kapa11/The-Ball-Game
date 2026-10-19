@@ -1,5 +1,5 @@
-import { Vector2 } from "../math/Vector2";
-import { BoundaryShape } from "./boundary/BoundaryShape";
+import { Vector2 } from "../math/Vector2.ts";
+import { BoundaryShape } from "./boundary/BoundaryShape.ts";
 
 export class Collision {
 

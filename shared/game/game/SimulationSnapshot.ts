@@ -1,5 +1,5 @@
-import type { GameState } from "./GameState";
-import type { Team } from "./PlayerData";
+import type { GameState } from "./GameState.ts";
+import type { Team } from "./PlayerData.ts";
 
 export interface SimulationSnapshot {
     players: {

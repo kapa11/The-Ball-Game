@@ -1,6 +1,6 @@
 import { Graphics } from "pixi.js";
-import { Player } from "../objects/Player";
-import type { SimulationSnapshot } from "../game/SimulationSnapshot";
+import { Player } from "../../../shared/game/objects/Player.ts";
+import type { SimulationSnapshot } from "../../../shared/game/game/SimulationSnapshot.ts";
 
 export class PlayerRenderer extends Graphics {
 

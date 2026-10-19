@@ -1,5 +1,5 @@
-import { Ball } from "../objects/Ball";
-import { Field } from "../objects/Field";
+import { Ball } from "../objects/Ball.ts";
+import { Field } from "../objects/Field.ts";
 
 export class GoalDetector {
 

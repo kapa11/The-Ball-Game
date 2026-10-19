@@ -1,5 +1,5 @@
-import { Vector2 } from "../../math/Vector2";
-import { LineSegment } from "../boundary/LineSegment";
+import { Vector2 } from "../../math/Vector2.ts";
+import { LineSegment } from "../boundary/LineSegment.ts";
 
 export function closestPointOnLineSegment(point: Vector2, segment: LineSegment): Vector2 {
 

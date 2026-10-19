@@ -1,14 +1,14 @@
-import { Field } from "./objects/Field";
-import { Player } from "./objects/Player";
-import { Vector2 } from "./math/Vector2";
-import { Ball } from "./objects/Ball";
-import type { SimulationSnapshot } from "./game/SimulationSnapshot";
-import { CollisionSystem } from "./physics/CollisionSystem";
-import { MatchState } from "./game/MatchState";
-import { GoalDetector } from "./game/GoalDetector";
-import { GameState } from "../src/game/GameState";
-import type { PlayerInput } from "./input/PlayerInput";
-import type { PlayerData, PlayerInputs, Team } from "./game/PlayerData";
+import { Field } from "./objects/Field.ts";
+import { Player } from "./objects/Player.ts";
+import { Vector2 } from "./math/Vector2.ts";
+import { Ball } from "./objects/Ball.ts";
+import type { SimulationSnapshot } from "./game/SimulationSnapshot.ts";
+import { CollisionSystem } from "./physics/CollisionSystem.ts";
+import { MatchState } from "./game/MatchState.ts";
+import { GoalDetector } from "./game/GoalDetector.ts";
+import { GameState } from "./game/GameState.ts";
+import type { PlayerInput } from "../protocol.ts";
+import type { PlayerData, PlayerInputs, Team } from "./game/PlayerData.ts";
 
 export class Game {
 
@@ -166,7 +166,19 @@ export class Game {
 
             this.ball.update(dt);
 
-            
+            // Resolve collisions between players
+            const playerList = Array.from(this.players.values());
+
+            for (let i = 0; i < playerList.length; i++) {
+                for (let j = i + 1; j < playerList.length; j++) {
+                    CollisionSystem.resolveBodyCollision(
+                        playerList[i].body,
+                        playerList[j].body,
+                        0.2
+                    );
+                }
+            }
+
             for (const [id, playerData] of this.players) {
                 const input = inputs.get(id) ?? this.getNeutralInput();
 

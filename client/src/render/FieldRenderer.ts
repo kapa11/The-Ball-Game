@@ -1,5 +1,5 @@
 import { Graphics } from "pixi.js";
-import { Field } from "../objects/Field";
+import { Field } from "../../../shared/game/objects/Field.ts";
 
 export class FieldRenderer extends Graphics {
 

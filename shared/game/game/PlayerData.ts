@@ -1,8 +1,8 @@
-import type { Player } from "../objects/Player";
+import type { Player } from "../objects/Player.ts";
 
 export type Team = "RED" | "BLUE";
 
-import type { PlayerInput } from "../input/PlayerInput";
+import type { PlayerInput } from "../../protocol.ts";
 
 export type PlayerInputs = Map<string, PlayerInput>;
 

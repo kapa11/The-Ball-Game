@@ -1,7 +1,7 @@
-import { Vector2 } from "../math/Vector2"
-import { Field } from "./Field";
-import type { PlayerInput } from "../input/PlayerInput"
-import { PhysicsBody } from "../physics/PhysicsBody";
+import { Vector2 } from "../math/Vector2.ts"
+import { Field } from "./Field.ts";
+import type { PlayerInput } from "../../protocol.ts"
+import { PhysicsBody } from "../physics/PhysicsBody.ts";
 
 export class Player extends PhysicsBody {
 

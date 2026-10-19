@@ -1,4 +1,4 @@
-import { Vector2 } from "../math/Vector2";
+import { Vector2 } from "../math/Vector2.ts";
 
 export abstract class PhysicsBody {
     physicsPosition: Vector2;

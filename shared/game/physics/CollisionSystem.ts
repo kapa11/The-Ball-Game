@@ -1,9 +1,9 @@
-import { Ball } from "../objects/Ball";
-import { Boundary } from "./boundary/Boundary";
-import { LineSegment } from "./boundary/LineSegment";
-import { Collision } from "./Collision";
-import { closestPointOnLineSegment } from "./geometry/ClosestPoint";
-import { PhysicsBody } from "./PhysicsBody";
+import { Ball } from "../objects/Ball.ts";
+import { Boundary } from "./boundary/Boundary.ts";
+import { LineSegment } from "./boundary/LineSegment.ts";
+import { Collision } from "./Collision.ts";
+import { closestPointOnLineSegment } from "./geometry/ClosestPoint.ts";
+import { PhysicsBody } from "./PhysicsBody.ts";
 
 export class CollisionSystem {
 

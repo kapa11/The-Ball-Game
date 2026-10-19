@@ -205,29 +205,10 @@ The-Ball-Game/
 │   └── src/
 │       ├── main.ts                # Application bootstrap & Pixi ticker
 │       ├── GameClient.ts          # Bridge orchestrating Input -> Socket -> Game -> Renderers
-│       ├── Game.ts                # Pure headless multi-player simulation
-│       ├── game/
-│       │   ├── GameState.ts       # Match state enum (PLAYING, GOAL_SCORED, etc.)
-│       │   ├── GoalDetector.ts    # Geometric goal line detection
-│       │   ├── MatchState.ts      # Score counters and timers
-│       │   ├── PlayerData.ts      # Team types & player body metadata
-│       │   └── SimulationSnapshot.ts # Flat DTO contract between sim & view
 │       ├── input/
 │       │   ├── Input.ts           # Low-level DOM keyboard listener
 │       │   ├── PlayerInput.ts     # Re-export from shared protocol
 │       │   └── PlayerInputReader.ts # Samples Input into PlayerInput
-│       ├── math/
-│       │   └── Vector2.ts         # Custom 2D vector class
-│       ├── objects/
-│       │   ├── Ball.ts            # Ball physics state & friction
-│       │   ├── Field.ts           # Pitch dimensions & boundary segment geometry
-│       │   └── Player.ts          # Player physics state & movement kinematics
-│       ├── physics/
-│       │   ├── PhysicsBody.ts     # Base class (position, velocity, radius, mass)
-│       │   ├── Collision.ts       # Collision contact data
-│       │   ├── CollisionSystem.ts # Generic body & boundary resolution
-│       │   ├── boundary/          # LineSegment & boundary shapes
-│       │   └── geometry/          # Closest-point algorithms
 │       └── render/
 │           ├── BallRenderer.ts    # PixiJS ball visual sync
 │           ├── FieldRenderer.ts   # PixiJS pitch lines, markings & goal nets
@@ -237,7 +218,28 @@ The-Ball-Game/
 │   └── src/
 │       └── index.ts               # Socket.io game server & connection manager
 ├── shared/
-│   └── protocol.ts                # Shared network protocol types (DTOs & events)
+│   ├── package.json               # ES module package definition
+│   ├── protocol.ts                # Shared network protocol types (DTOs & events)
+│   └── game/                      # Headless multi-player simulation
+│       ├── Game.ts                # Match simulation & physics orchestrator
+│       ├── game/
+│       │   ├── GameState.ts       # Match state enum (PLAYING, GOAL_SCORED, etc.)
+│       │   ├── GoalDetector.ts    # Geometric goal line detection
+│       │   ├── MatchState.ts      # Score counters and timers
+│       │   ├── PlayerData.ts      # Team types & player body metadata
+│       │   └── SimulationSnapshot.ts # Flat DTO contract between sim & view
+│       ├── math/
+│       │   └── Vector2.ts         # Custom 2D vector class
+│       ├── objects/
+│       │   ├── Ball.ts            # Ball physics state & friction
+│       │   ├── Field.ts           # Pitch dimensions & boundary segment geometry
+│       │   └── Player.ts          # Player physics state & movement kinematics
+│       └── physics/
+│           ├── PhysicsBody.ts     # Base class (position, velocity, radius, mass)
+│           ├── Collision.ts       # Collision contact data
+│           ├── CollisionSystem.ts # Generic body & boundary resolution
+│           ├── boundary/          # LineSegment & boundary shapes
+│           └── geometry/          # Closest-point algorithms
 └── docs/
     └── gameplay.png               # In-game pitch screenshot
 ```

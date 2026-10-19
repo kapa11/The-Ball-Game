@@ -1,4 +1,4 @@
-import { BoundaryShape } from "./BoundaryShape";
+import { BoundaryShape } from "./BoundaryShape.ts";
 
 export class Boundary {
 
