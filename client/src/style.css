@@ -1,0 +1,624 @@
+/* ==========================================================================
+   TBG — The Ball Game | Authentication & Global Shell Styles
+   ========================================================================== */
+
+:root {
+  --bg-void: #060907;
+  --bg-surface: #0b110d;
+  --bg-card: rgba(13, 20, 16, 0.88);
+  --bg-input: rgba(7, 11, 8, 0.9);
+  --bg-input-focus: rgba(10, 17, 12, 0.98);
+
+  --pitch-green: #22c55e;
+  --pitch-green-bright: #4ade80;
+  --pitch-green-deep: #16a34a;
+  --pitch-turf: #4c8527;
+  --pitch-glow: rgba(34, 197, 94, 0.22);
+  --pitch-line: rgba(34, 197, 94, 0.11);
+
+  --text-primary: #f3f7f4;
+  --text-secondary: #98a89d;
+  --text-muted: #5c6e62;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-green: rgba(34, 197, 94, 0.35);
+  --error-bg: rgba(239, 68, 68, 0.12);
+  --error-border: rgba(239, 68, 68, 0.35);
+  --error-text: #fca5a5;
+
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   Initial Session Check Loader
+   ========================================================================== */
+
+.tbg-boot-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(34, 197, 94, 0.08) 0%,
+    transparent 65%
+  );
+}
+
+.tbg-boot-spinner {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid rgba(34, 197, 94, 0.18);
+  border-top-color: var(--pitch-green);
+  animation: tbg-spin 0.8s linear infinite;
+}
+
+.tbg-boot-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Authentication Screen Layout & Football Pitch Backdrop
+   ========================================================================== */
+
+.tbg-auth-screen {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 15%,
+      rgba(34, 197, 94, 0.14) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 50% 85%,
+      rgba(76, 133, 39, 0.1) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, #050806 0%, #09100b 50%, #050806 100%);
+}
+
+/* Subtle tactical pitch lines in the background */
+.tbg-pitch-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+}
+
+.tbg-pitch-svg {
+  width: min(1280px, 94vw);
+  height: auto;
+  max-height: 88vh;
+  stroke: var(--pitch-line);
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.tbg-pitch-glow-orb {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(34, 197, 94, 0.11) 0%,
+    rgba(34, 197, 94, 0.03) 45%,
+    transparent 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+  animation: tbg-pulse-glow 6s ease-in-out infinite alternate;
+}
+
+/* ==========================================================================
+   Centered Authentication Card
+   ========================================================================== */
+
+.tbg-auth-container {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: tbg-card-enter 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Branding Header */
+.tbg-brand {
+  text-align: center;
+  margin-bottom: 24px;
+  user-select: none;
+}
+
+.tbg-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  margin-bottom: 12px;
+}
+
+.tbg-brand-ball-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pitch-green);
+  box-shadow: 0 0 10px var(--pitch-green);
+}
+
+.tbg-brand-pill-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pitch-green-bright);
+}
+
+.tbg-logo {
+  font-size: 2.75rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-shadow: 0 0 32px rgba(34, 197, 94, 0.25);
+}
+
+.tbg-logo-accent {
+  color: var(--pitch-green);
+}
+
+.tbg-tagline {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+/* Card Surface */
+.tbg-auth-card {
+  width: 100%;
+  background: var(--bg-card);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 30px 28px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(34, 197, 94, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.tbg-auth-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--pitch-green),
+    transparent
+  );
+  opacity: 0.75;
+}
+
+.tbg-card-header {
+  margin-bottom: 22px;
+}
+
+.tbg-card-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+}
+
+.tbg-card-subtitle {
+  margin-top: 4px;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Form Controls
+   ========================================================================== */
+
+.tbg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.tbg-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tbg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tbg-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.tbg-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tbg-input {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 0.94rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.tbg-input::placeholder {
+  color: var(--text-muted);
+}
+
+.tbg-input:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.tbg-input:focus {
+  background: var(--bg-input-focus);
+  border-color: var(--pitch-green);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+}
+
+.tbg-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tbg-input--with-toggle {
+  padding-right: 68px;
+}
+
+.tbg-password-toggle {
+  position: absolute;
+  right: 8px;
+  padding: 5px 9px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tbg-password-toggle:hover {
+  color: var(--text-primary);
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.tbg-password-toggle:focus-visible {
+  outline: 2px solid var(--pitch-green);
+  outline-offset: 1px;
+}
+
+/* Error Banner */
+.tbg-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: var(--radius-sm);
+  color: var(--error-text);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  animation: tbg-shake 0.32s ease;
+}
+
+.tbg-error-banner[hidden] {
+  display: none;
+}
+
+.tbg-error-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: #f87171;
+}
+
+/* Submit Button */
+.tbg-submit-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 12px 18px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  color: #041208;
+  background: linear-gradient(
+    135deg,
+    var(--pitch-green-bright) 0%,
+    var(--pitch-green) 60%,
+    var(--pitch-green-deep) 100%
+  );
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow:
+    0 8px 24px rgba(34, 197, 94, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+.tbg-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 28px rgba(34, 197, 94, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  filter: brightness(1.04);
+}
+
+.tbg-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.tbg-submit-btn:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.tbg-btn-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(4, 18, 8, 0.25);
+  border-top-color: #041208;
+  animation: tbg-spin 0.7s linear infinite;
+}
+
+/* Switch Mode Footer */
+.tbg-auth-footer {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+  font-size: 0.87rem;
+  color: var(--text-secondary);
+}
+
+.tbg-switch-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 5px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--pitch-green-bright);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.tbg-switch-link:hover {
+  color: #86efac;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Game View Container & Top HUD Bar
+   ========================================================================== */
+
+.tbg-game-hud {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 14px;
+  background: rgba(11, 17, 13, 0.82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.tbg-hud-user {
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tbg-signout-btn {
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tbg-signout-btn:hover {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+}
+
+/* ==========================================================================
+   Animations & Responsive Breakpoints
+   ========================================================================== */
+
+@keyframes tbg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes tbg-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tbg-pulse-glow {
+  from {
+    transform: scale(0.95);
+    opacity: 0.75;
+  }
+  to {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes tbg-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@media (max-width: 520px) {
+  .tbg-auth-card {
+    padding: 24px 20px;
+  }
+
+  .tbg-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tbg-logo {
+    font-size: 2.3rem;
+  }
+}

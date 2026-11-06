@@ -13,7 +13,9 @@
     "vite": "^8.1.1"
   },
   "dependencies": {
+    "@neondatabase/auth": "^0.6.0-beta",
     "pixi.js": "^8.19.0",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "tslib": "^2.9.1"
   }
 }
