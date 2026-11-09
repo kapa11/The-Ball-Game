@@ -3,22 +3,33 @@ import { Application } from "pixi.js";
 import { GameClient } from "./GameClient";
 import { auth } from "./auth/auth";
 import { AuthUI, type AuthenticatedUser } from "./auth/AuthUI";
+import { DashboardUI } from "./dashboard/DashboardUI";
+import { RoomLobbyUI } from "./lobby/RoomLobbyUI";
+import { ClientRoomSession } from "./rooms/mockRoomSession";
+import type { RoomSessionState } from "./rooms/roomTypes";
 
 const appContainer = document.getElementById("app") ?? document.body;
 
 let gameStarted = false;
 
-async function startGame(user: AuthenticatedUser): Promise<void> {
+async function startGame(
+    user: AuthenticatedUser,
+    room?: RoomSessionState
+): Promise<void> {
     if (gameStarted) return;
     gameStarted = true;
 
     appContainer.innerHTML = "";
 
-    // Minimal top-right session HUD bar (Sign Out)
+    // Minimal top-right session HUD bar (Room Code + User + Sign Out)
     const hud = document.createElement("div");
     hud.className = "tbg-game-hud";
     const displayLabel = user.username || user.name || user.email;
+    const roomBadge = room
+        ? `<span class="tbg-hud-room" title="${room.name}">ROOM ${room.code}</span>`
+        : "";
     hud.innerHTML = `
+        ${roomBadge}
         <span class="tbg-hud-user" title="${user.email}">${displayLabel}</span>
         <button type="button" class="tbg-signout-btn" id="tbg-signout-btn">Sign Out</button>
     `;
@@ -53,6 +64,64 @@ async function startGame(user: AuthenticatedUser): Promise<void> {
     });
 }
 
+function showAuthScreen(): void {
+    appContainer.innerHTML = "";
+
+    const authUI = new AuthUI(appContainer, (user) => {
+        authUI.destroy();
+        showDashboard(user);
+    });
+
+    authUI.mount("signin");
+}
+
+function showDashboard(user: AuthenticatedUser): void {
+    appContainer.innerHTML = "";
+
+    const dashboardUI = new DashboardUI(appContainer, user, {
+        onCreateRoom: (input) => {
+            dashboardUI.destroy();
+            const roomSession = ClientRoomSession.fromCreate(user, input);
+            showRoomLobby(user, roomSession);
+        },
+        onJoinRoom: (input) => {
+            dashboardUI.destroy();
+            const roomSession = ClientRoomSession.fromJoin(user, input);
+            showRoomLobby(user, roomSession);
+        },
+        onSignOut: () => {
+            dashboardUI.destroy();
+            showAuthScreen();
+        },
+    });
+
+    dashboardUI.mount();
+}
+
+function showRoomLobby(
+    user: AuthenticatedUser,
+    roomSession: ClientRoomSession
+): void {
+    appContainer.innerHTML = "";
+
+    const lobbyUI = new RoomLobbyUI(appContainer, user, roomSession, {
+        onStartMatch: (roomState) => {
+            lobbyUI.destroy();
+            void startGame(user, roomState);
+        },
+        onLeaveRoom: () => {
+            lobbyUI.destroy();
+            showDashboard(user);
+        },
+        onSignOut: () => {
+            lobbyUI.destroy();
+            showAuthScreen();
+        },
+    });
+
+    lobbyUI.mount();
+}
+
 function showBootLoader(): HTMLElement {
     const loader = document.createElement("div");
     loader.className = "tbg-boot-loader";
@@ -78,7 +147,7 @@ async function bootstrap(): Promise<void> {
                 `tbg_username_${sessionUser.email.toLowerCase()}`
             );
 
-            await startGame({
+            showDashboard({
                 id: sessionUser.id,
                 name: sessionUser.name,
                 email: sessionUser.email,
@@ -94,13 +163,7 @@ async function bootstrap(): Promise<void> {
     }
 
     loader.remove();
-
-    const authUI = new AuthUI(appContainer, (user) => {
-        authUI.destroy();
-        void startGame(user);
-    });
-
-    authUI.mount("signin");
+    showAuthScreen();
 }
 
 void bootstrap();

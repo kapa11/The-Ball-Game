@@ -14,6 +14,7 @@ Instead of slapping together a quick prototype inside a monolithic rendering loo
 - **Custom 2D Vector Math & Physics**: Circle-circle elastic collisions, player-player body collisions, momentum conservation with restitution, directional impulse kicking, and line-segment pitch boundary reflections.
 - **Strict Separation of Concerns**: Game logic and physics know **nothing** about PixiJS, canvases, or the DOM. The entire simulation runs headless inside [`shared/game/`](shared/game/) and communicates via immutable state snapshots.
 - **Server-Authoritative Multiplayer**: The Node.js server owns the official simulation tick (60 Hz) and streams world snapshots (20 Hz) over Socket.io. The client is a thin visual renderer that captures local inputs and displays server snapshots.
+- **Club Authentication & Session Flow**: Players sign up or sign in through a pitch-themed landing interface powered by **Neon Auth** (`@neondatabase/auth` / Better Auth) before stepping onto the pitch, with automatic session persistence and sign-out controls.
 
 ---
 
@@ -25,6 +26,7 @@ Instead of slapping together a quick prototype inside a monolithic rendering loo
 | **Checkpoint 2** | ✅ | **Pitch & Match Rules**: FIFA-scaled pitch geometry, goal net detection, score tracking, match timer, and match lifecycle states (`PLAYING` $\to$ `GOAL_SCORED` $\to$ `RESETTING` $\to$ `FINISHED`). |
 | **Checkpoint 3** | ✅ | **Headless Architecture Split**: Simulation completely divorced from PixiJS. Introduction of `PhysicsBody`, `SimulationSnapshot`, decoupled `PlayerInput`, and dedicated renderers. |
 | **Checkpoint 4** | ✅ | **Authoritative Multiplayer & Shared Simulation**: Full migration of headless simulation to `shared/game/`, authoritative 60 Hz server loop, 20 Hz snapshot broadcasting, dynamic multi-client sprite management, browser blur/tab-switch input flush, and multi-tab local testing. |
+| **Checkpoint 5** | ✅ | **Neon Auth & Player Accounts**: Integrated `@neondatabase/auth` (Better Auth) with a dark, football-themed Vanilla TypeScript Sign In / Sign Up landing UI, client-side validation, session persistence (`auth.getSession()`), and in-game HUD sign-out. |
 | **Milestone 1** | 🎯 *(Up Next)* | **Online Server Hosting**: Deploy Node.js server to a public host and point client connection to remote address for cross-device play. |
 | **Milestones 2–5** | 📋 *(Planned)* | **Real-Network Verification, Movement Quality (Interpolation/Prediction), Lobbies/Rooms, and Frontend Polish**. |
 
@@ -32,10 +34,20 @@ Instead of slapping together a quick prototype inside a monolithic rendering loo
 
 ## 🏗️ Architecture & Simulation Pipeline
 
-The engine cleanly separates responsibilities into **Shared Simulation (Model)**, **PixiJS Renderers (View)**, **Socket.io (Transport)**, and **Authoritative Server (Controller)**.
+The engine cleanly separates responsibilities into **Authentication Gate (Neon Auth)**, **Shared Simulation (Model)**, **PixiJS Renderers (View)**, **Socket.io (Transport)**, and **Authoritative Server (Controller)**.
 
 ```
-  [Browser Client A]                         [Node.js Authoritative Server]
+  [Browser Client]
+  ┌───────────────────────────────────────────────┐
+  │ 1. Session Bootstrap (main.ts)                │
+  │    auth.getSession() ──► AuthUI (Sign In/Up)  │
+  │           │ (Authenticated)                   │
+  │           ▼                                   │
+  │ 2. Game Initialization (startGame)            │
+  └───────────┬───────────────────────────────────┘
+              │
+              ▼
+  [Authenticated GameClient]                  [Node.js Authoritative Server]
   ┌─────────────────────┐                   ┌─────────────────────────────┐
   │  Keyboard / Input   │                   │                             │
   │         │           │                   │    Fixed Tick Loop (60 Hz)  │
@@ -112,7 +124,13 @@ export type ServerMessage =
     | { type: "state"; snapshot: GameSnapshot };
 ```
 
-### 4. Thin Client Presentation (`client/src/GameClient.ts`)
+### 4. Authentication Gate & Session Bootstrap (`client/src/auth/`)
+Before initializing the PixiJS canvas or opening a Socket.io connection, the client runs an authentication gate powered by `@neondatabase/auth` (Better Auth):
+- **Session Persistence (`main.ts`)**: On page load, `auth.getSession()` checks for an active session. Authenticated players transition directly to the pitch with a top-right HUD badge and `Sign Out` button (`auth.signOut()`).
+- **Vanilla TypeScript Landing UI (`AuthUI.ts`)**: Unauthenticated visitors are greeted by a dark, football-pitch-themed landing page (`TBG` branding, tactical SVG pitch lines, Sign In and Sign Up views, password visibility toggles, and client-side form validation) completely decoupled from PixiJS.
+- **Zero Input Contention**: Because `GameClient` (and its `window` keyboard listeners) is only instantiated after authentication succeeds, typing `W`, `A`, `S`, `D`, or `Space` inside form fields never triggers game inputs.
+
+### 5. Thin Client Presentation (`client/src/GameClient.ts`)
 - **Pure Renderer**: The client no longer advances a local physics simulation; it simply renders the latest authoritative server snapshot (`this.latestSnapshot`).
 - **Dynamic Entity Lifecycle**: When a new player ID appears in a snapshot, a new `PlayerRenderer` is created and added to the stage; when `playerLeft` fires, the renderer is removed and destroyed.
 - **Input Sampling & Blur Protection**: Samples keyboard inputs every frame and streams them over the socket. When the browser tab loses focus or visibility changes, all input buffers are flushed immediately to prevent ghost inputs.
@@ -202,12 +220,17 @@ stateDiagram-v2
 The-Ball-Game/
 ├── client/
 │   ├── index.html
-│   ├── package.json               # PixiJS v8, Socket.io-client, Vite, TypeScript
+│   ├── .env.local                 # VITE_NEON_AUTH_URL configuration (gitignored)
+│   ├── package.json               # PixiJS v8, Socket.io-client, @neondatabase/auth, Vite, TypeScript
 │   ├── tsconfig.json
 │   ├── public/                    # Favicons and SVG assets
 │   └── src/
-│       ├── main.ts                # Client bootstrap & Pixi render loop
+│       ├── main.ts                # Session bootstrap, AuthUI gate & Pixi render loop
+│       ├── style.css              # Dark football-pitch auth UI & HUD styles
 │       ├── GameClient.ts          # Orchestrator: streams input & renders server snapshots
+│       ├── auth/
+│       │   ├── auth.ts            # Neon Auth client initialization (createAuthClient)
+│       │   └── AuthUI.ts          # Vanilla TS Sign In / Sign Up landing component
 │       ├── input/
 │       │   ├── Input.ts           # DOM keyboard listener + blur/visibility flush
 │       │   ├── PlayerInput.ts     # Re-export from shared protocol
@@ -281,17 +304,24 @@ The-Ball-Game/
    ```
    The server starts on `http://localhost:3000` and initializes the 60 Hz simulation loop.
 
-3. **Start the Game Client:**
+3. **Configure & Start the Game Client:**
    In a separate terminal:
    ```bash
    cd client
    npm install
+   ```
+   Create a `client/.env.local` file with your Neon Auth URL:
+   ```env
+   VITE_NEON_AUTH_URL=https://your-neon-auth-endpoint/auth
+   ```
+   Then start the Vite dev server:
+   ```bash
    npm run dev
    ```
-   Open `http://localhost:5173` in your browser.
+   Open `http://localhost:5173` in your browser, sign up or sign in through the **TBG** authentication screen, and step onto the pitch!
 
 4. **Test Multiplayer:**
-   Open a second browser tab (or window) to `http://localhost:5173`. Tab 1 connects as **RED**, and Tab 2 connects as **BLUE**. Both tabs will see each other moving, colliding, and kicking the ball in real time!
+   Open a second browser window (or incognito/private window to test a separate account) to `http://localhost:5173`. Window 1 connects as **RED**, and Window 2 connects as **BLUE**. Both clients will see each other moving, colliding, and kicking the ball in real time!
 
 ---
 
@@ -299,6 +329,7 @@ The-Ball-Game/
 
 - **Decoupled Simulation Enables Authoritative Servers**: Because `shared/game/` has zero dependencies on PixiJS or DOM globals, the exact same simulation runs directly on the Node.js server inside a `setInterval` tick loop without polyfills or mocks.
 - **Decoupling Tick Rate from Broadcast Rate**: Simulating physics at 60 Hz provides numerical stability for ball integration and high-speed bounces, while broadcasting snapshots at 20 Hz (50 ms) keeps network bandwidth minimal without degrading visual fluidity.
+- **Gating Canvas & Input Listeners Behind Auth**: Delaying `new GameClient(app)` until after `auth.getSession()` or `AuthUI` completes ensures that DOM keyboard listeners (`W`, `A`, `S`, `D`, `Spacebar`) are never active while a user is typing credentials into HTML form inputs.
 - **Handling the "Stuck Key" Browser Bug**: In browser-based games, switching tabs or clicking outside the window prevents `keyup` events from firing, leaving movement keys permanently pressed. Adding `window.blur` and `document.visibilitychange` listeners to flush all key states eliminates runaway inputs during multi-tab testing.
 - **Dynamic Client Lifecycle**: Treating the client as a pure consumer of server snapshots means the client doesn't need complex connection-state synchronization; it simply reconciles its visual display list (`playerRenderers`) against the player IDs present in each broadcast.
 
@@ -317,6 +348,7 @@ The-Ball-Game/
 - [x] **20 Hz Network Snapshot Broadcast & Dynamic Renderers**: Client dynamic player renderer lifecycle.
 - [x] **Browser Focus & Input Flush**: Cleared stuck keys on `window.blur` and `document.visibilitychange`.
 - [x] **Local Multi-Tab Multiplayer**: Verified real-time two-tab local play across teams.
+- [x] **Neon Auth & Landing UI (Checkpoint 5)**: Integrated `@neondatabase/auth` (Better Auth) with Vanilla TypeScript Sign In / Sign Up screens, form validation, session persistence, and sign-out HUD.
 
 ---
 
